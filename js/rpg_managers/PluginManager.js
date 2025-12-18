@@ -11,21 +11,23 @@ PluginManager._path = "js/plugins/";
 PluginManager._scripts = [];
 PluginManager._errorUrls = [];
 PluginManager._parameters = {};
+PluginManager._commands = {};
 
 PluginManager.setup = function (plugins) {
-  plugins.forEach(function (plugin) {
-    if (plugin.status && !this._scripts.contains(plugin.name)) {
-      this.setParameters(plugin.name, plugin.parameters);
-      this.loadScript(plugin.name + ".js");
-      this._scripts.push(plugin.name);
+  for (const plugin of plugins) {
+    const pluginName = Utils.extractFileName(plugin.name);
+    if (plugin.status && !this._scripts.includes(pluginName)) {
+      this.setParameters(pluginName, plugin.parameters);
+      this.loadScript(plugin.name);
+      this._scripts.push(pluginName);
     }
-  }, this);
+  }
 };
 
 PluginManager.checkErrors = function () {
   var url = this._errorUrls.shift();
   if (url) {
-    throw new Error("Failed to load: " + url);
+    this.throwLoadError(url);
   }
 };
 
@@ -37,12 +39,13 @@ PluginManager.setParameters = function (name, parameters) {
   this._parameters[name.toLowerCase()] = parameters;
 };
 
-PluginManager.loadScript = function (name) {
-  var url = this._path + name;
+PluginManager.loadScript = function (filename) {
+  var url = this.makeUrl(filename);
   var script = document.createElement("script");
   script.type = "text/javascript";
   script.src = url;
   script.async = false;
+  script.defer = true;
   script.onerror = this.onError.bind(this);
   script._url = url;
   document.body.appendChild(script);
@@ -50,4 +53,29 @@ PluginManager.loadScript = function (name) {
 
 PluginManager.onError = function (e) {
   this._errorUrls.push(e.target._url);
+};
+
+PluginManager.makeUrl = function (filename) {
+  var encoded = Utils.encodeURI(filename);
+  if (!encoded.toLowerCase().endsWith(".js")) {
+    encoded += ".js";
+  }
+  return this._path + encoded;
+};
+
+PluginManager.throwLoadError = function (url) {
+  throw new Error("Failed to load: " + url);
+};
+
+PluginManager.registerCommand = function (pluginName, commandName, func) {
+  var key = pluginName + ":" + commandName;
+  this._commands[key] = func;
+};
+
+PluginManager.callCommand = function (self, pluginName, commandName, args) {
+  var key = pluginName + ":" + commandName;
+  var func = this._commands[key];
+  if (typeof func === "function") {
+    func.bind(self)(args);
+  }
 };

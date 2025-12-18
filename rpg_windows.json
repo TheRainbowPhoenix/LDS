@@ -45,5 +45,6 @@
   "js/rpg_windows/Window_TitleCommand.js",
   "js/rpg_windows/Window_GameEnd.js",
   "js/rpg_windows/Window_DebugRange.js",
-  "js/rpg_windows/Window_DebugEdit.js"
+  "js/rpg_windows/Window_DebugEdit.js",
+  "js/rpg_windows/MZCompat_Windows.js"
 ]

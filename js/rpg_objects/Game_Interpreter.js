@@ -2010,9 +2010,30 @@ Game_Interpreter.prototype.command356 = function () {
 };
 
 Game_Interpreter.prototype.pluginCommand = function (command, args) {
+  var commandName = args[0];
+  if (commandName) {
+    PluginManager.callCommand(this, command, commandName, args.slice(1));
+  }
   if (command === "CancelOff") {
     $gameMessage.cancelOff = true;
   }
+};
+
+Game_Interpreter.prototype.command357 = function () {
+  try {
+    var pluginName = Utils.extractFileName(this._params[0]);
+    PluginManager.callCommand(
+      this,
+      pluginName,
+      this._params[1],
+      this._params[3]
+    );
+  } catch (error) {
+    error.eventCommand = "plugin_command";
+    error.content = this._params[0];
+    throw error;
+  }
+  return true;
 };
 
 Game_Interpreter.requestImagesByPluginCommand = function (command, args) {};

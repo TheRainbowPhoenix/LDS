@@ -9,5 +9,6 @@
   "js/rpg_managers/TextManager.js",
   "js/rpg_managers/SceneManager.js",
   "js/rpg_managers/BattleManager.js",
-  "js/rpg_managers/PluginManager.js"
+  "js/rpg_managers/PluginManager.js",
+  "js/rpg_managers/ColorManager.js"
 ]

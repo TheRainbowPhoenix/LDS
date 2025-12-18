@@ -1,5 +1,6 @@
 [
   "js/rpg_sprites/_header.js",
+  "js/rpg_sprites/MZCompat_Sprites.js",
   "js/rpg_sprites/Sprite_Base.js",
   "js/rpg_sprites/Sprite_Button.js",
   "js/rpg_sprites/Sprite_Character.js",

@@ -22,3 +22,8 @@ window.onload = function() {
         SceneManager.run(Scene_Boot);
     }
 };
+
+// MZ compatibility: expose Main class placeholder
+if (typeof Main === "undefined") {
+    function Main() {}
+}

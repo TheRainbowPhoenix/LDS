@@ -30,6 +30,14 @@ Utils.RPGMAKER_VERSION = "2.0.0";
 
 Utils.RPGMAKER_ENGINE = "Pixi v7";
 
+Utils.encodeURI = function (str) {
+  return encodeURIComponent(str).replace(/%2F/g, "/");
+};
+
+Utils.extractFileName = function (filename) {
+  return filename.split("/").pop();
+};
+
 /**
  * Checks whether the option is in the query string.
  *

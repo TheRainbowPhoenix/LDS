@@ -8,6 +8,26 @@
 
 Project Ace is a comprehensive modernization of the RPG Maker MV engine core. This project aims to update the aging RMMV codebase with modern technologies while maintaining backward compatibility with existing plugins and projects.
 
+## DENO ? DENO !
+
+```bash
+# 1- Build the concatenated RPG MV scripts into dist/
+deno task build
+
+# 2- Copy build outputs + libs + plugins + template into ./game/
+deno task copy
+
+# (Optional) Watch & auto rebuild+copy on changes
+deno task watch
+
+# (Optional) Run a local web server for ./game/
+deno task serve
+
+# (Optional) Full packaging pipeline:
+# build -> copy-all into ./corescript -> crc plugin -> zip (zip/7z if available)
+deno task package
+```
+
 ## 🔧 Technical Overview
 
 ### 🎨 Renderer Upgrade: Pixi.js v4 → v8

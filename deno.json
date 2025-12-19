@@ -1,0 +1,42 @@
+{
+  "tasks": {
+    "build:core": "deno run -A scripts/concat.ts rpg_core",
+    "build:managers": "deno run -A scripts/concat.ts rpg_managers",
+    "build:objects": "deno run -A scripts/concat.ts rpg_objects",
+    "build:scenes": "deno run -A scripts/concat.ts rpg_scenes",
+    "build:sprites": "deno run -A scripts/concat.ts rpg_sprites",
+    "build:windows": "deno run -A scripts/concat.ts rpg_windows",
+
+    "build:mixer": "deno run -A scripts/build_mixer.ts",
+
+    "build": "deno task build:core && deno task build:managers && deno task build:objects && deno task build:scenes && deno task build:sprites && deno task build:windows && deno task build:mixer",
+
+    "copy:corescripts": "deno run -A scripts/copy.ts corescripts",
+    "copy:libs": "deno run -A scripts/copy.ts libs",
+    "copy:main": "deno run -A scripts/copy.ts main",
+    "copy:plugins": "deno run -A scripts/copy.ts plugins",
+    "copy:template": "deno run -A scripts/copy.ts template",
+
+    "copy": "deno task copy:corescripts && deno task copy:libs && deno task copy:main && deno task copy:plugins && deno task copy:template",
+
+    "copy-all": "deno run -A scripts/copy_all.ts ./corescript",
+    "zip": "deno run -A scripts/zip.ts corescript.zip ./corescript",
+
+    "test": "deno task build && deno task copy",
+
+    "unittest": "deno run -A tests/test-save.js",
+
+    "serve": "deno run -A scripts/serve.ts ./game 8080",
+
+    "watch": "deno run -A scripts/watch.ts",
+
+    "package": "deno task build && deno task copy-all && deno task crc && deno task zip",
+
+    "crc": "deno run -A scripts/generate_crc.ts"
+  },
+  "imports": {
+    "@std/fs": "jsr:@std/fs",
+    "@std/path": "jsr:@std/path",
+    "@std/http": "jsr:@std/http"
+  }
+}

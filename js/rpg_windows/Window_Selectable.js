@@ -630,17 +630,14 @@ Window_Selectable.prototype.isCurrentItemEnabled = function () {
 };
 
 Window_Selectable.prototype.drawAllItems = function() {
-    var topIndex = this.topIndex();
-    for (var i = 0; i < this.maxPageItems(); i++) {
-        var index = topIndex + i;
+    const topIndex = this.topIndex();
+    let max = this.maxVisibleItems ? this.maxVisibleItems() : this.maxPageItems()
+    for (let i = 0; i < max; i++) {
+        const index = topIndex + i;
         if (index < this.maxItems()) {
-            this.drawItem(index);
-        }
-    }
-    var topIndex = this.topIndex() + this.maxPageItems();
-    for (var i = 0; i < this.maxCols(); i++) {
-        var index = topIndex + i;
-        if (index < this.maxItems()) {
+            if (this.drawItemBackground) {
+              this.drawItemBackground(index);
+            }
             this.drawItem(index);
         }
     }

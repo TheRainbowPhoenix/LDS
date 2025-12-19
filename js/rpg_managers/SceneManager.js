@@ -171,7 +171,7 @@ SceneManager.requestUpdate = function () {
 };
 
 SceneManager.update = function () {
-  try {
+  // try {
     this.tickStart();
     if (!this._isUsableTimeInMs) {
       this.updateInputData();
@@ -179,9 +179,9 @@ SceneManager.update = function () {
     this.updateManagers();
     this.updateMain();
     this.tickEnd();
-  } catch (e) {
-    this.catchException(e);
-  }
+  // } catch (e) {
+  //   this.catchException(e);
+  // }
 };
 
 SceneManager.terminate = function () {

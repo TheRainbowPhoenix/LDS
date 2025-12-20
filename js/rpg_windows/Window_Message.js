@@ -28,8 +28,26 @@ Window_Message.prototype.initMembers = function () {
   this._waitCount = 0;
   this._faceBitmap = null;
   this._textState = null;
+  this._goldWindow = null;
+  this._nameBoxWindow = null;
+  this._choiceListWindow = null;
+  this._numberInputWindow = null;
+  this._eventItemWindow = null;
   this.clearFlags();
 };
+
+Window_Message.prototype.setGoldWindow = function(goldWindow) {
+    this._goldWindow = goldWindow;
+};
+
+Window_Message.prototype.setNameBoxWindow = function(nameBoxWindow) {
+    this._nameBoxWindow = nameBoxWindow;
+};
+
+Window_Message.prototype.setChoiceListWindow = function(choiceListWindow) {
+    this._choiceListWindow = choiceListWindow;
+};
+
 
 Window_Message.prototype.subWindows = function () {
   return [
@@ -38,6 +56,14 @@ Window_Message.prototype.subWindows = function () {
     this._numberWindow,
     this._itemWindow,
   ];
+};
+
+Window_Message.prototype.setNumberInputWindow = function(numberInputWindow) {
+    this._numberInputWindow = numberInputWindow;
+};
+
+Window_Message.prototype.setEventItemWindow = function(eventItemWindow) {
+    this._eventItemWindow = eventItemWindow;
 };
 
 Window_Message.prototype.createSubWindows = function () {
@@ -72,6 +98,7 @@ Window_Message.prototype.numVisibleRows = function () {
 Window_Message.prototype.update = function () {
   this.checkToNotClose();
   Window_Base.prototype.update.call(this);
+  this.synchronizeNameBox();
   while (!this.isOpening() && !this.isClosing()) {
     if (this.updateWait()) {
       return;
@@ -95,6 +122,12 @@ Window_Message.prototype.checkToNotClose = function () {
     if (this.doesContinue()) {
       this.open();
     }
+  }
+};
+
+Window_Message.prototype.synchronizeNameBox = function() {
+  if (this._nameBoxWindow && this._nameBoxWindow.openness) {
+    this._nameBoxWindow.openness = this.openness;
   }
 };
 

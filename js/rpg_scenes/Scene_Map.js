@@ -7,19 +7,20 @@ function Scene_Map() {
   this.initialize.apply(this, arguments);
 }
 
-Scene_Map.prototype = Object.create(Scene_Base.prototype);
+Scene_Map.prototype = Object.create(Scene_Message.prototype);
 Scene_Map.prototype.constructor = Scene_Map;
 
 Scene_Map.prototype.initialize = function () {
-  Scene_Base.prototype.initialize.call(this);
+  Scene_Message.prototype.initialize.call(this);
   this._waitCount = 0;
   this._encounterEffectDuration = 0;
   this._mapLoaded = false;
   this._touchCount = 0;
+    this._menuEnabled = false;
 };
 
 Scene_Map.prototype.create = function () {
-  Scene_Base.prototype.create.call(this);
+  Scene_Message.prototype.create.call(this);
   this._transfer = $gamePlayer.isTransferring();
   var mapId = this._transfer ? $gamePlayer.newMapId() : $gameMap.mapId();
   DataManager.loadMapData(mapId);
@@ -41,7 +42,7 @@ Scene_Map.prototype.onMapLoaded = function () {
 };
 
 Scene_Map.prototype.start = function () {
-  Scene_Base.prototype.start.call(this);
+  Scene_Message.prototype.start.call(this);
   SceneManager.clearStack();
   if (this._transfer) {
     this.fadeInForTransfer();
@@ -54,6 +55,7 @@ Scene_Map.prototype.start = function () {
 };
 
 Scene_Map.prototype.update = function () {
+  Scene_Message.prototype.update.call(this);
   this.updateDestination();
   this.updateMainMultiply();
   if (this.isSceneChangeOk()) {
@@ -92,7 +94,7 @@ Scene_Map.prototype.isFastForward = function () {
 };
 
 Scene_Map.prototype.stop = function () {
-  Scene_Base.prototype.stop.call(this);
+  Scene_Message.prototype.stop.call(this);
   $gamePlayer.straighten();
   this._mapNameWindow.close();
   if (this.needsSlowFadeOut()) {
@@ -109,12 +111,12 @@ Scene_Map.prototype.isBusy = function () {
     (this._messageWindow && this._messageWindow.isClosing()) ||
     this._waitCount > 0 ||
     this._encounterEffectDuration > 0 ||
-    Scene_Base.prototype.isBusy.call(this)
+    Scene_Message.prototype.isBusy.call(this)
   );
 };
 
 Scene_Map.prototype.terminate = function () {
-  Scene_Base.prototype.terminate.call(this);
+  Scene_Message.prototype.terminate.call(this);
   if (!SceneManager.isNextScene(Scene_Battle)) {
     this._spriteset.update();
     this._mapNameWindow.hide();
@@ -220,6 +222,7 @@ Scene_Map.prototype.createSpriteset = function () {
 Scene_Map.prototype.createAllWindows = function () {
   this.createMessageWindow();
   this.createScrollTextWindow();
+  Scene_Message.prototype.createAllWindows.call(this);
 };
 
 Scene_Map.prototype.createMapNameWindow = function () {

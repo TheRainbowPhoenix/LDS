@@ -16,6 +16,19 @@ Window_ChoiceList.prototype.initialize = function (messageWindow) {
   this.openness = 0;
   this.deactivate();
   this._background = 0;
+    this._canRepeat = false;
+};
+
+Window_ChoiceList.prototype.setMessageWindow = function(messageWindow) {
+    this._messageWindow = messageWindow;
+};
+
+Window_ChoiceList.prototype.createCancelButton = function() {
+    if (ConfigManager.touchUI) {
+        this._cancelButton = new Sprite_Button("cancel");
+        this._cancelButton.visible = false;
+        this.addChild(this._cancelButton);
+    }
 };
 
 Window_ChoiceList.prototype.start = function () {
@@ -65,8 +78,8 @@ Window_ChoiceList.prototype.windowWidth = function () {
 };
 
 Window_ChoiceList.prototype.numVisibleRows = function () {
-  var messageY = this._messageWindow.y;
-  var messageHeight = this._messageWindow.height;
+  var messageY = this._messageWindow ? this._messageWindow.y : 0;
+  var messageHeight = this._messageWindow ? this._messageWindow.height : 0;
   var centerY = Graphics.boxHeight / 2;
   var choices = $gameMessage.choices();
   var numLines = choices.length;

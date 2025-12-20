@@ -30,10 +30,12 @@ Graphics.initialize = function (width, height, type) {
   this._boxWidth = this._width;
   this._boxHeight = this._height;
 
+  this._defaultScale = 1;
   this._scale = 1;
   this._realScale = 1;
 
   this._errorShowed = false;
+  this._tickHandler = null;
   this._errorPrinter = null;
   this._canvas = null;
   this._video = null;
@@ -42,6 +44,8 @@ Graphics.initialize = function (width, height, type) {
   this._upperCanvas = null;
   this._renderer = null;
   this._fpsMeter = null;
+  this._fpsCounter = null;
+  this._loadingSpinner = null;
   this._modeBox = null;
   this._skipCount = 0;
   this._maxSkip = 3;
@@ -50,10 +54,37 @@ Graphics.initialize = function (width, height, type) {
   this._loadingCount = 0;
   this._fpsMeterToggled = false;
   this._stretchEnabled = this._defaultStretchMode();
+  this._app = null;
+  this._effekseer = null;
+  this._wasLoading = false;
 
   this._canUseDifferenceBlend = false;
   this._canUseSaturationBlend = false;
   this._hiddenCanvas = null;
+
+  /**
+   * The total frame count of the game screen.
+   *
+   * @type number
+   * @name Graphics.frameCount
+   */
+  this.frameCount = 0;
+
+  /**
+   * The width of the window display area.
+   *
+   * @type number
+   * @name Graphics.boxWidth
+   */
+  this.boxWidth = this._width;
+
+  /**
+   * The height of the window display area.
+   *
+   * @type number
+   * @name Graphics.boxHeight
+   */
+  this.boxHeight = this._height;
 
   this._testCanvasBlendModes();
   this._modifyExistingElements();
@@ -64,6 +95,73 @@ Graphics.initialize = function (width, height, type) {
   this._setupEventHandlers();
   this._setupCssFontLoading();
   this._setupProgress();
+
+  return true; // !!this._app;
+};
+
+/**
+ * The PIXI.Application object.
+ *
+ * @readonly
+ * @type PIXI.Application
+ * @name Graphics.app
+ */
+Object.defineProperty(Graphics, "app", {
+  get: function () {
+    return this._app;
+  },
+  configurable: true,
+});
+/**
+ * The context object of Effekseer.
+ *
+ * @readonly
+ * @type EffekseerContext
+ * @name Graphics.effekseer
+ */
+Object.defineProperty(Graphics, "effekseer", {
+  get: function () {
+    return this._effekseer;
+  },
+  configurable: true,
+});
+
+/**
+ * Register a handler for tick events.
+ *
+ * @param {function} handler - The listener function to be added for updates.
+ */
+Graphics.setTickHandler = function (handler) {
+  this._tickHandler = handler;
+};
+
+/**
+ * Starts the game loop.
+ */
+Graphics.startGameLoop = function () {
+  if (this._app) {
+    this._app.start();
+  }
+};
+
+/**
+ * Stops the game loop.
+ */
+Graphics.stopGameLoop = function () {
+  if (this._app) {
+    this._app.stop();
+  }
+};
+
+/**
+ * Sets the stage to be rendered.
+ *
+ * @param {Stage} stage - The stage object to be rendered.
+ */
+Graphics.setStage = function (stage) {
+  if (this._app) {
+    this._app.stage = stage;
+  }
 };
 
 Graphics._setupCssFontLoading = function () {
@@ -259,6 +357,7 @@ Graphics.setProgressEnabled = function (enable) {
  *
  * @static
  * @method startLoading
+ * Shows the loading spinner.
  */
 Graphics.startLoading = function () {
   this._loadingCount = 0;
@@ -268,6 +367,10 @@ Graphics.startLoading = function () {
   this._progressTimeout = setTimeout(function () {
     Graphics._showProgress();
   }, 1500);
+
+  if (!document.getElementById("loadingSpinner")) {
+    document.body.appendChild(this._loadingSpinner);
+  }
 };
 
 Graphics._setupProgress = function () {
@@ -345,7 +448,9 @@ Graphics.updateLoading = function () {
 };
 
 /**
- * Erases the "Now Loading" image.
+ * Erases the loading spinner.
+ *
+ * @returns {boolean} True if the loading spinner was active.
  *
  * @static
  * @method endLoading
@@ -354,6 +459,13 @@ Graphics.endLoading = function () {
   this._clearUpperCanvas();
   this._upperCanvas.style.opacity = 0;
   this._hideProgress();
+
+  if (document.getElementById("loadingSpinner")) {
+    document.body.removeChild(this._loadingSpinner);
+    return true;
+  } else {
+    return false;
+  }
 };
 
 /**
@@ -441,6 +553,26 @@ Graphics.printError = function (name, message) {
 };
 
 /**
+ * Displays a button to try to reload resources.
+ *
+ * @param {function} retry - The callback function to be called when the button
+ *                           is pressed.
+ */
+Graphics.showRetryButton = function (retry) {
+  const button = document.createElement("button");
+  button.id = "retryButton";
+  button.innerHTML = "Retry";
+  // [Note] stopPropagation() is required for iOS Safari.
+  button.ontouchstart = (e) => e.stopPropagation();
+  button.onclick = () => {
+    Graphics.eraseError();
+    retry();
+  };
+  this._errorPrinter.appendChild(button);
+  button.focus();
+};
+
+/**
  * Shows the detail of error.
  *
  * @static
@@ -476,6 +608,19 @@ Graphics.setErrorMessage = function (message) {
  */
 Graphics.setShowErrorDetail = function (showErrorDetail) {
   this._showErrorDetail = showErrorDetail;
+};
+
+/**
+ * Erases the loading error text.
+ */
+Graphics.eraseError = function () {
+  if (this._errorPrinter) {
+    this._errorPrinter.innerHTML = this._makeErrorHtml();
+    if (this._wasLoading) {
+      this.startLoading();
+    }
+  }
+  this._clearCanvasFilter();
 };
 
 /**
@@ -632,7 +777,7 @@ Graphics.setVideoVolume = function (value) {
  */
 Graphics.pageToCanvasX = function (x) {
   if (this._canvas) {
-    var left = this._canvas.offsetLeft;
+    const left = this._canvas.offsetLeft;
     return Math.round((x - left) / this._realScale);
   } else {
     return 0;
@@ -650,7 +795,7 @@ Graphics.pageToCanvasX = function (x) {
  */
 Graphics.pageToCanvasY = function (y) {
   if (this._canvas) {
-    var top = this._canvas.offsetTop;
+    const top = this._canvas.offsetTop;
     return Math.round((y - top) / this._realScale);
   } else {
     return 0;
@@ -668,6 +813,32 @@ Graphics.pageToCanvasY = function (y) {
  */
 Graphics.isInsideCanvas = function (x, y) {
   return x >= 0 && x < this._width && y >= 0 && y < this._height;
+};
+
+/**
+ * Shows the game screen.
+ */
+Graphics.showScreen = function () {
+  this._canvas.style.opacity = 1;
+};
+
+/**
+ * Hides the game screen.
+ */
+Graphics.hideScreen = function () {
+  this._canvas.style.opacity = 0;
+};
+
+/**
+ * Changes the size of the game screen.
+ *
+ * @param {number} width - The width of the game screen.
+ * @param {number} height - The height of the game screen.
+ */
+Graphics.resize = function (width, height) {
+  this._width = width;
+  this._height = height;
+  this._updateAllElements();
 };
 
 /**
@@ -774,6 +945,25 @@ Object.defineProperty(Graphics, "scale", {
 });
 
 /**
+ * The default zoom scale of the game screen.
+ *
+ * @type number
+ * @name Graphics.defaultScale
+ */
+Object.defineProperty(Graphics, "defaultScale", {
+  get: function () {
+    return this._defaultScale;
+  },
+  set: function (value) {
+    if (this._defaultScale !== value) {
+      this._defaultScale = value;
+      this._updateAllElements();
+    }
+  },
+  configurable: true,
+});
+
+/**
  * @static
  * @method _createAllElements
  * @private
@@ -781,10 +971,12 @@ Object.defineProperty(Graphics, "scale", {
 Graphics._createAllElements = function () {
   this._createErrorPrinter();
   this._createCanvas();
+  this._createLoadingSpinner();
   this._createVideo();
   this._createUpperCanvas();
   this._createRenderer();
   this._createFPSMeter();
+  this._createFPSCounter();
   this._createModeBox();
   this._createGameFontLoader();
 };
@@ -805,6 +997,14 @@ Graphics._updateAllElements = function () {
   this._updateProgress();
 };
 
+Graphics._onTick = function (deltaTime) {
+  // TODO: not used...
+};
+
+Graphics._canRender = function () {
+  return !!Graphics._renderer; // this._app.stage;
+};
+
 /**
  * @static
  * @method _updateRealScale
@@ -812,13 +1012,33 @@ Graphics._updateAllElements = function () {
  */
 Graphics._updateRealScale = function () {
   if (this._stretchEnabled) {
-    var h = window.innerWidth / this._width;
-    var v = window.innerHeight / this._height;
+    const h = this._stretchWidth() / this._width;
+    const v = this._stretchHeight() / this._height;
     if (h >= 1 && h - 0.01 <= 1) h = 1;
     if (v >= 1 && v - 0.01 <= 1) v = 1;
     this._realScale = Math.min(h, v);
+    window.scrollTo(0, 0);
   } else {
-    this._realScale = this._scale;
+    this._realScale = this._scale; // _defaultScale
+  }
+};
+
+Graphics._stretchWidth = function () {
+  if (Utils.isMobileDevice()) {
+    return document.documentElement.clientWidth;
+  } else {
+    return window.innerWidth;
+  }
+};
+
+Graphics._stretchHeight = function () {
+  if (Utils.isMobileDevice()) {
+    // [Note] Mobile browsers often have special operations at the top and
+    //   bottom of the screen.
+    const rate = Utils.isLocal() ? 1.0 : 0.9;
+    return document.documentElement.clientHeight * rate;
+  } else {
+    return window.innerHeight;
   }
 };
 
@@ -830,7 +1050,7 @@ Graphics._updateRealScale = function () {
  * @return {String}
  * @private
  */
-Graphics._makeErrorHtml = function (name, message) {
+Graphics._makeErrorHtml = function (name, message /*, error*/) {
   return (
     '<font color="yellow"><b>' +
     name +
@@ -847,9 +1067,8 @@ Graphics._makeErrorHtml = function (name, message) {
  * @private
  */
 Graphics._defaultStretchMode = function () {
-  return true;
+  return Utils.isNwjs() || Utils.isMobileDevice(); // true ?
 };
-
 /**
  * @static
  * @method _testCanvasBlendModes
@@ -1036,7 +1255,7 @@ Graphics._formatStackTrace = function (error) {
  */
 Graphics._createCanvas = function () {
   this._canvas = document.createElement("canvas");
-  this._canvas.id = "GameCanvas";
+  this._canvas.id = "GameCanvas"; // gameCanvas ?
   this._updateCanvas();
   document.body.appendChild(this._canvas);
 };
@@ -1079,6 +1298,19 @@ Graphics._updateVideo = function () {
   this._video.height = this._height;
   this._video.style.zIndex = 2;
   this._centerElement(this._video);
+};
+
+Graphics._createLoadingSpinner = function () {
+  const loadingSpinner = document.createElement("div");
+  const loadingSpinnerImage = document.createElement("div");
+  loadingSpinner.id = "loadingSpinner";
+  loadingSpinnerImage.id = "loadingSpinnerImage";
+  loadingSpinner.appendChild(loadingSpinnerImage);
+  this._loadingSpinner = loadingSpinner;
+};
+
+Graphics._createFPSCounter = function () {
+  this._fpsCounter = new Graphics.FPSCounter();
 };
 
 /**
@@ -1155,6 +1387,7 @@ Graphics._createRenderer = function () {
   } catch (e) {
     this._renderer = null;
   }
+  this._app = this._renderer;
 };
 
 /**
@@ -1320,6 +1553,14 @@ Graphics._applyCanvasFilter = function () {
   }
 };
 
+Graphics._clearCanvasFilter = function () {
+  if (this._canvas) {
+    this._canvas.style.opacity = 1;
+    this._canvas.style.filter = "";
+    this._canvas.style.webkitFilter = "";
+  }
+};
+
 /**
  * @static
  * @method _onVideoLoad
@@ -1452,6 +1693,8 @@ Graphics._switchFPSMeter = function () {
   }
 };
 
+Graphics._switchFPSCounter = Graphics._switchFPSMeter;
+
 /**
  * @static
  * @method _switchStretchMode
@@ -1534,4 +1777,87 @@ Graphics._cancelFullScreen = function () {
       document.msExitFullscreen();
     }
   }
+};
+
+Graphics._createEffekseerContext = function () {
+  if (this._renderer && window.effekseer) {
+    try {
+      this._effekseer = effekseer.createContext();
+      if (this._effekseer && this._renderer.gl) {
+        this._effekseer.init(this._renderer.gl);
+      }
+    } catch (e) {
+      this._app = null;
+    }
+  }
+};
+
+
+//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+// FPSCounter
+//
+// This is based on Darsain's FPSMeter which is under the MIT license.
+// The original can be found at https://github.com/Darsain/fpsmeter.
+
+Graphics.FPSCounter = function() {
+    this.initialize(...arguments);
+};
+
+Graphics.FPSCounter.prototype.initialize = function() {
+    this._tickCount = 0;
+    this._frameTime = 100;
+    this._frameStart = 0;
+    this._lastLoop = performance.now() - 100;
+    this._showFps = true;
+    this.fps = 0;
+    this.duration = 0;
+    this._createElements();
+    this._update();
+};
+
+Graphics.FPSCounter.prototype.startTick = function() {
+    this._frameStart = performance.now();
+};
+
+Graphics.FPSCounter.prototype.endTick = function() {
+    const time = performance.now();
+    const thisFrameTime = time - this._lastLoop;
+    this._frameTime += (thisFrameTime - this._frameTime) / 12;
+    this.fps = 1000 / this._frameTime;
+    this.duration = Math.max(0, time - this._frameStart);
+    this._lastLoop = time;
+    if (this._tickCount++ % 15 === 0) {
+        this._update();
+    }
+};
+
+Graphics.FPSCounter.prototype.switchMode = function() {
+    if (this._boxDiv.style.display === "none") {
+        this._boxDiv.style.display = "block";
+        this._showFps = true;
+    } else if (this._showFps) {
+        this._showFps = false;
+    } else {
+        this._boxDiv.style.display = "none";
+    }
+    this._update();
+};
+
+Graphics.FPSCounter.prototype._createElements = function() {
+    this._boxDiv = document.createElement("div");
+    this._labelDiv = document.createElement("div");
+    this._numberDiv = document.createElement("div");
+    this._boxDiv.id = "fpsCounterBox";
+    this._labelDiv.id = "fpsCounterLabel";
+    this._numberDiv.id = "fpsCounterNumber";
+    this._boxDiv.style.display = "none";
+    this._boxDiv.appendChild(this._labelDiv);
+    this._boxDiv.appendChild(this._numberDiv);
+    document.body.appendChild(this._boxDiv);
+};
+
+Graphics.FPSCounter.prototype._update = function() {
+    const count = this._showFps ? this.fps : this.duration;
+    this._labelDiv.textContent = this._showFps ? "FPS" : "ms";
+    this._numberDiv.textContent = count.toFixed(0);
 };

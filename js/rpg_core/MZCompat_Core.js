@@ -452,3 +452,13 @@ if (typeof Utils !== "undefined") {
     };
   }
 }
+
+// Tilemap.Layer alias used by some plugins to tweak rendering
+if (typeof Tilemap !== "undefined" && !Tilemap.Layer) {
+  function TilemapLayer() {
+    PIXI.Container.call(this);
+  }
+  TilemapLayer.prototype = Object.create(PIXI.Container.prototype);
+  TilemapLayer.prototype.constructor = TilemapLayer;
+  Tilemap.Layer = TilemapLayer;
+}

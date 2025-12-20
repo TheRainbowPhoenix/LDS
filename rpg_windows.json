@@ -18,6 +18,7 @@
   "js/rpg_windows/Window_EquipCommand.js",
   "js/rpg_windows/Window_EquipSlot.js",
   "js/rpg_windows/Window_EquipItem.js",
+  "js/rpg_windows/Window_StatusBase.js",
   "js/rpg_windows/Window_Status.js",
   "js/rpg_windows/Window_Options.js",
   "js/rpg_windows/Window_SavefileList.js",
@@ -44,6 +45,8 @@
   "js/rpg_windows/Window_BattleItem.js",
   "js/rpg_windows/Window_TitleCommand.js",
   "js/rpg_windows/Window_GameEnd.js",
+  "js/rpg_windows/Window_NameBox.js",
+  "js/rpg_windows/Window_StatusEquip.js",
   "js/rpg_windows/Window_DebugRange.js",
   "js/rpg_windows/Window_DebugEdit.js"
 ]

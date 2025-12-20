@@ -13,7 +13,7 @@ Window_Base.prototype.constructor = Window_Base;
 Window_Base.prototype.initialize = function (x, y, width, height) {
   Window.prototype.initialize.call(this);
   this.loadWindowskin();
-  this.move(x, y, width, height);
+  this.move(x, y, width, height); // (rect.x, rect.y, rect.width, rect.height);
   this.updatePadding();
   this.updateBackOpacity();
   this.updateTone();
@@ -28,12 +28,47 @@ Window_Base._iconHeight = 32;
 Window_Base._faceWidth = 144;
 Window_Base._faceHeight = 144;
 
+Window_Base.prototype.destroy = function (options) {
+  this.destroyContents();
+  // if (this._dimmerSprite) {
+  //     this._dimmerSprite.bitmap.destroy();
+  // }
+  Window.prototype.destroy.call(this, options);
+};
+
+Window_Base.prototype.checkRectObject = function (rect) {
+  if (typeof rect !== "object" || !("x" in rect)) {
+    // Probably MV plugin is used
+    throw new Error("Argument must be a Rectangle");
+  }
+};
+
 Window_Base.prototype.lineHeight = function () {
   return 36;
 };
 
+Window_Base.prototype.itemWidth = function () {
+  return this.innerWidth;
+};
+
+Window_Base.prototype.itemHeight = function () {
+  return this.lineHeight();
+};
+
+Window_Base.prototype.itemPadding = function () {
+  return 8;
+};
+
+Window_Base.prototype.baseTextRect = function () {
+  const rect = new Rectangle(0, 0, this.innerWidth, this.innerHeight);
+  rect.pad(-this.itemPadding(), 0);
+  return rect;
+};
+
 Window_Base.prototype.standardFontFace = function () {
-  if ($gameSystem.isChinese()) {
+  if ($gameSystem.mainFontFace) {
+    return $gameSystem.mainFontFace();
+  } else if ($gameSystem.isChinese()) {
     return "SimHei, Heiti TC, sans-serif";
   } else if ($gameSystem.isKorean()) {
     return "Dotum, AppleGothic, sans-serif";
@@ -63,7 +98,7 @@ Window_Base.prototype.loadWindowskin = function () {
 };
 
 Window_Base.prototype.updatePadding = function () {
-  this.padding = this.standardPadding();
+  this.padding = $gameSystem.windowPadding();
 };
 
 Window_Base.prototype.updateBackOpacity = function () {
@@ -71,11 +106,11 @@ Window_Base.prototype.updateBackOpacity = function () {
 };
 
 Window_Base.prototype.contentsWidth = function () {
-  return this.width - this.standardPadding() * 2;
+  return this.width - this.standardPadding() * 2; // [MZ]: return this.innerWidth;
 };
 
 Window_Base.prototype.contentsHeight = function () {
-  return this.height - this.standardPadding() * 2;
+  return this.height - this.standardPadding() * 2; // [MZ]: return this.innerHeight;
 };
 
 Window_Base.prototype.fittingHeight = function (numLines) {
@@ -88,8 +123,21 @@ Window_Base.prototype.updateTone = function () {
 };
 
 Window_Base.prototype.createContents = function () {
-  this.contents = new Bitmap(this.contentsWidth(), this.contentsHeight());
+  const width = this.contentsWidth();
+  const height = this.contentsHeight();
+  this.destroyContents();
+  this.contents = new Bitmap(width, height);
+  this.contentsBack = new Bitmap(width, height);
   this.resetFontSettings();
+};
+
+Window_Base.prototype.destroyContents = function () {
+  if (this.contents && this.contents.destroy) {
+    this.contents.destroy();
+  }
+  if (this.contentsBack && this.contentsBack.destroy) {
+    this.contentsBack.destroy();
+  }
 };
 
 Window_Base.prototype.resetFontSettings = function () {
@@ -100,6 +148,7 @@ Window_Base.prototype.resetFontSettings = function () {
 
 Window_Base.prototype.resetTextColor = function () {
   this.changeTextColor(this.normalColor());
+  this.changeOutlineColor(ColorManager.outlineColor());
 };
 
 Window_Base.prototype.update = function () {
@@ -177,7 +226,7 @@ Window_Base.prototype.normalColor = function () {
 };
 
 Window_Base.prototype.systemColor = function () {
-  return this.textColor(16);
+  return this.textColor(16); // [MZ]: ColorManager.systemColor();
 };
 
 Window_Base.prototype.crisisColor = function () {
@@ -244,8 +293,19 @@ Window_Base.prototype.changeTextColor = function (color) {
   this.contents.textColor = color;
 };
 
+Window_Base.prototype.changeOutlineColor = function (color) {
+  this.contents.outlineColor = color;
+};
+
 Window_Base.prototype.changePaintOpacity = function (enabled) {
   this.contents.paintOpacity = enabled ? 255 : this.translucentOpacity();
+};
+
+Window_Base.prototype.drawRect = function (x, y, width, height) {
+  const outlineColor = this.contents.outlineColor;
+  const mainColor = this.contents.textColor;
+  this.contents.fillRect(x, y, width, height, outlineColor);
+  this.contents.fillRect(x + 1, y + 1, width - 2, height - 2, mainColor);
 };
 
 Window_Base.prototype.drawText = function (text, x, y, maxWidth, align) {
@@ -256,11 +316,9 @@ Window_Base.prototype.textWidth = function (text) {
   return this.contents.measureTextWidth(text);
 };
 
-Window_Base.prototype.drawTextEx = function (text, x, y) {
+Window_Base.prototype.drawTextEx = function (text, x, y, width = 0) {
   if (text) {
-    var textState = { index: 0, x: x, y: y, left: x };
-    textState.text = this.convertEscapeCharacters(text);
-    textState.height = this.calcTextHeight(textState, false);
+    var textState = this.createTextState(text, x, y, width);
     this.resetFontSettings();
     while (textState.index < textState.text.length) {
       this.processCharacter(textState);
@@ -271,6 +329,55 @@ Window_Base.prototype.drawTextEx = function (text, x, y) {
   }
 };
 
+Window_Base.prototype.createTextState = function (text, x, y, width) {
+  const rtl = Utils.containsArabic ? Utils.containsArabic(text) : false;
+  let textState = { index: 0, x: x, y: y, left: x };
+  textState.text = this.convertEscapeCharacters(text);
+  textState.x = rtl ? x + width : x;
+  textState.width = width;
+  textState.height = this.calcTextHeight(textState, false);
+  textState.startX = textState.x;
+  textState.startY = textState.y;
+  textState.rtl = rtl;
+  textState.buffer = this.createTextBuffer(rtl);
+  textState.drawing = true;
+  textState.outputWidth = 0;
+  textState.outputHeight = 0;
+
+  return textState;
+};
+
+Window_Base.prototype.processAllText = function (textState) {
+  while (textState.index < textState.text.length) {
+    this.processCharacter(textState);
+  }
+  this.flushTextState(textState);
+};
+
+Window_Base.prototype.flushTextState = function (textState) {
+  const text = textState.buffer;
+  const rtl = textState.rtl;
+  const width = this.textWidth(text);
+  const height = textState.height;
+  const x = rtl ? textState.x - width : textState.x;
+  const y = textState.y;
+  if (textState.drawing) {
+    this.contents.drawText(text, x, y, width, height);
+  }
+  textState.x += rtl ? -width : width;
+  textState.buffer = this.createTextBuffer(rtl);
+  const outputWidth = Math.abs(textState.x - textState.startX);
+  if (textState.outputWidth < outputWidth) {
+    textState.outputWidth = outputWidth;
+  }
+  textState.outputHeight = y - textState.startY + height;
+};
+
+Window_Base.prototype.createTextBuffer = function (rtl) {
+  // U+202B: RIGHT-TO-LEFT EMBEDDING
+  return rtl ? "\u202B" : "";
+};
+
 Window_Base.prototype.convertEscapeCharacters = function (text) {
   text = text.replace(/\\/g, "\x1b");
   text = text.replace(/\x1b\x1b/g, "\\");
@@ -278,54 +385,70 @@ Window_Base.prototype.convertEscapeCharacters = function (text) {
     /\x1bV\[(\d+)\]/gi,
     function () {
       return $gameVariables.value(parseInt(arguments[1]));
-    }.bind(this),
+    }.bind(this)
   );
   text = text.replace(
     /\x1bV\[(\d+)\]/gi,
     function () {
       return $gameVariables.value(parseInt(arguments[1]));
-    }.bind(this),
+    }.bind(this)
   );
   text = text.replace(
     /\x1bN\[(\d+)\]/gi,
     function () {
       return this.actorName(parseInt(arguments[1]));
-    }.bind(this),
+    }.bind(this)
   );
   text = text.replace(
     /\x1bP\[(\d+)\]/gi,
     function () {
       return this.partyMemberName(parseInt(arguments[1]));
-    }.bind(this),
+    }.bind(this)
   );
   text = text.replace(/\x1bG/gi, TextManager.currencyUnit);
   return text;
 };
 
 Window_Base.prototype.actorName = function (n) {
-  var actor = n >= 1 ? $gameActors.actor(n) : null;
+  const actor = n >= 1 ? $gameActors.actor(n) : null;
   return actor ? actor.name() : "";
 };
 
 Window_Base.prototype.partyMemberName = function (n) {
-  var actor = n >= 1 ? $gameParty.members()[n - 1] : null;
+  const actor = n >= 1 ? $gameParty.members()[n - 1] : null;
   return actor ? actor.name() : "";
 };
 
 Window_Base.prototype.processCharacter = function (textState) {
-  switch (textState.text[textState.index]) {
-    case "\n":
-      this.processNewLine(textState);
-      break;
-    case "\f":
-      this.processNewPage(textState);
-      break;
-    case "\x1b":
-      this.processEscapeCharacter(this.obtainEscapeCode(textState), textState);
-      break;
-    default:
-      this.processNormalCharacter(textState);
-      break;
+  const c = textState.text[textState.index];
+  if (c.charCodeAt(0) < 0x20) {
+    this.flushTextState(textState);
+    this.processControlCharacter(textState, c);
+  } else {
+    switch (c) {
+      case "\n":
+        this.processNewLine(textState);
+        break;
+      case "\f":
+        this.processNewPage(textState);
+        break;
+      case "\x1b":
+        this.processControlCharacter(textState, c);
+        break;
+      default:
+        this.processNormalCharacter(textState);
+        break;
+    }
+  }
+};
+
+Window_Base.prototype.processControlCharacter = function (textState, c) {
+  if (c === "\n") {
+    this.processNewLine(textState);
+  }
+  if (c === "\x1b") {
+    const code = this.obtainEscapeCode(textState);
+    this.processEscapeCharacter(code, textState);
   }
 };
 
@@ -337,7 +460,7 @@ Window_Base.prototype.processNormalCharacter = function (textState) {
 };
 
 Window_Base.prototype.processNewLine = function (textState) {
-  textState.x = textState.left;
+  textState.x = textState.left; // .startX
   textState.y += textState.height;
   textState.height = this.calcTextHeight(textState, false);
   textState.index++;
@@ -377,6 +500,15 @@ Window_Base.prototype.processEscapeCharacter = function (code, textState) {
     case "I":
       this.processDrawIcon(this.obtainEscapeParam(textState), textState);
       break;
+    case "PX":
+      textState.x = this.obtainEscapeParam(textState);
+      break;
+    case "PY":
+      textState.y = this.obtainEscapeParam(textState);
+      break;
+    case "FS":
+      this.contents.fontSize = this.obtainEscapeParam(textState);
+      break;
     case "{":
       this.makeFontBigger();
       break;
@@ -386,9 +518,20 @@ Window_Base.prototype.processEscapeCharacter = function (code, textState) {
   }
 };
 
+Window_Base.prototype.processColorChange = function (colorIndex) {
+  this.changeTextColor(ColorManager.textColor(colorIndex));
+};
+
 Window_Base.prototype.processDrawIcon = function (iconIndex, textState) {
-  this.drawIcon(iconIndex, textState.x + 2, textState.y + 2);
+  if (textState.drawing !== false) {
+    this.drawIcon(iconIndex, textState.x + 2, textState.y + 2);
+  }
   textState.x += Window_Base._iconWidth + 4;
+  // if (ImageManager && ImageManager.iconWidth) {
+  //   textState.x += ImageManager.iconWidth + 4;
+  // } else {
+  //   textState.x += Window_Base._iconWidth + 4;
+  // }
 };
 
 Window_Base.prototype.makeFontBigger = function () {
@@ -404,6 +547,7 @@ Window_Base.prototype.makeFontSmaller = function () {
 };
 
 Window_Base.prototype.calcTextHeight = function (textState, all) {
+  const lineSpacing = this.lineHeight() - $gameSystem.mainFontSize();
   var lastFontSize = this.contents.fontSize;
   var textHeight = 0;
   var lines = textState.text.slice(textState.index).split("\n");
@@ -435,10 +579,33 @@ Window_Base.prototype.calcTextHeight = function (textState, all) {
   return textHeight;
 };
 
+Window_Base.prototype.maxFontSizeInLine = function (line) {
+  let maxFontSize = this.contents.fontSize;
+  const regExp = /\x1b({|}|FS)(\[(\d+)])?/gi;
+  for (;;) {
+    const array = regExp.exec(line);
+    if (!array) {
+      break;
+    }
+    const code = String(array[1]).toUpperCase();
+    if (code === "{") {
+      this.makeFontBigger();
+    } else if (code === "}") {
+      this.makeFontSmaller();
+    } else if (code === "FS") {
+      this.contents.fontSize = parseInt(array[3]);
+    }
+    if (this.contents.fontSize > maxFontSize) {
+      maxFontSize = this.contents.fontSize;
+    }
+  }
+  return maxFontSize;
+};
+
 Window_Base.prototype.drawIcon = function (iconIndex, x, y) {
   var bitmap = ImageManager.loadSystem("IconSet");
-  var pw = Window_Base._iconWidth;
-  var ph = Window_Base._iconHeight;
+  var pw = Window_Base._iconWidth; // [MZ]: ImageManager.iconWidth;
+  var ph = Window_Base._iconHeight; // [MZ]: ImageManager.iconHeight;
   var sx = (iconIndex % 16) * pw;
   var sy = Math.floor(iconIndex / 16) * ph;
   this.contents.blt(bitmap, sx, sy, pw, ph, x, y);
@@ -450,19 +617,19 @@ Window_Base.prototype.drawFace = function (
   x,
   y,
   width,
-  height,
+  height
 ) {
-  width = width || Window_Base._faceWidth;
-  height = height || Window_Base._faceHeight;
-  var bitmap = ImageManager.loadFace(faceName);
-  var pw = Window_Base._faceWidth;
-  var ph = Window_Base._faceHeight;
-  var sw = Math.min(width, pw);
-  var sh = Math.min(height, ph);
-  var dx = Math.floor(x + Math.max(width - pw, 0) / 2);
-  var dy = Math.floor(y + Math.max(height - ph, 0) / 2);
-  var sx = (faceIndex % 4) * pw + (pw - sw) / 2;
-  var sy = Math.floor(faceIndex / 4) * ph + (ph - sh) / 2;
+  width = width || Window_Base._faceWidth; // [MZ]: ImageManager.faceWidth;
+  height = height || Window_Base._faceHeight; // [MZ]: ImageManager.faceHeight;
+  const bitmap = ImageManager.loadFace(faceName);
+  const pw = Window_Base._faceWidth; // [MZ]: ImageManager.faceWidth;
+  const ph = Window_Base._faceHeight; // [MZ]: ImageManager.faceHeight;
+  const sw = Math.min(width, pw);
+  const sh = Math.min(height, ph);
+  const dx = Math.floor(x + Math.max(width - pw, 0) / 2);
+  const dy = Math.floor(y + Math.max(height - ph, 0) / 2);
+  const sx = (faceIndex % 4) * pw + (pw - sw) / 2;
+  const sy = Math.floor(faceIndex / 4) * ph + (ph - sh) / 2;
   this.contents.blt(bitmap, sx, sy, sw, sh, dx, dy);
 };
 
@@ -470,15 +637,15 @@ Window_Base.prototype.drawCharacter = function (
   characterName,
   characterIndex,
   x,
-  y,
+  y
 ) {
-  var bitmap = ImageManager.loadCharacter(characterName);
-  var big = ImageManager.isBigCharacter(characterName);
-  var pw = bitmap.width / (big ? 3 : 12);
-  var ph = bitmap.height / (big ? 4 : 8);
-  var n = big ? 0 : characterIndex;
-  var sx = ((n % 4) * 3 + 1) * pw;
-  var sy = Math.floor(n / 4) * 4 * ph;
+  const bitmap = ImageManager.loadCharacter(characterName);
+  const big = ImageManager.isBigCharacter(characterName);
+  const pw = bitmap.width / (big ? 3 : 12);
+  const ph = bitmap.height / (big ? 4 : 8);
+  const n = big ? 0 : characterIndex;
+  const sx = ((n % 4) * 3 + 1) * pw;
+  const sy = Math.floor(n / 4) * 4 * ph;
   this.contents.blt(bitmap, sx, sy, pw, ph, x - pw / 2, y - ph);
 };
 
@@ -557,7 +724,7 @@ Window_Base.prototype.drawCurrentAndMax = function (
   y,
   width,
   color1,
-  color2,
+  color2
 ) {
   var labelWidth = this.textWidth("HP");
   var valueWidth = this.textWidth("0000");
@@ -591,7 +758,7 @@ Window_Base.prototype.drawActorHp = function (actor, x, y, width) {
     y,
     width,
     this.hpColor(actor),
-    this.normalColor(),
+    this.normalColor()
   );
 };
 
@@ -609,7 +776,7 @@ Window_Base.prototype.drawActorMp = function (actor, x, y, width) {
     y,
     width,
     this.mpColor(actor),
-    this.normalColor(),
+    this.normalColor()
   );
 };
 
@@ -647,10 +814,10 @@ Window_Base.prototype.drawItemName = function (item, x, y, width) {
 };
 
 Window_Base.prototype.drawCurrencyValue = function (value, unit, x, y, width) {
-  var unitWidth = Math.min(80, this.textWidth(unit));
+  const unitWidth = Math.min(80, this.textWidth(unit));
   this.resetTextColor();
   this.drawText(value, x, y, width - unitWidth - 6, "right");
-  this.changeTextColor(this.systemColor());
+  this.changeTextColor(this.systemColor()); // ColorManager.systemColor()
   this.drawText(unit, x + width - unitWidth, y, unitWidth, "right");
 };
 
@@ -679,16 +846,23 @@ Window_Base.prototype.setBackgroundType = function (type) {
 
 Window_Base.prototype.showBackgroundDimmer = function () {
   if (!this._dimmerSprite) {
-    this._dimmerSprite = new Sprite();
+    this._dimmerSprite = new Sprite(); // [MZ]: this.createDimmerSprite();
     this._dimmerSprite.bitmap = new Bitmap(0, 0);
     this.addChildToBack(this._dimmerSprite);
   }
-  var bitmap = this._dimmerSprite.bitmap;
+  const bitmap = this._dimmerSprite.bitmap;
   if (bitmap.width !== this.width || bitmap.height !== this.height) {
     this.refreshDimmerBitmap();
   }
   this._dimmerSprite.visible = true;
   this.updateBackgroundDimmer();
+};
+
+Window_Base.prototype.createDimmerSprite = function () {
+  this._dimmerSprite = new Sprite();
+  this._dimmerSprite.bitmap = new Bitmap(0, 0);
+  this._dimmerSprite.x = -4;
+  this.addChildToBack(this._dimmerSprite);
 };
 
 Window_Base.prototype.hideBackgroundDimmer = function () {
@@ -705,12 +879,12 @@ Window_Base.prototype.updateBackgroundDimmer = function () {
 
 Window_Base.prototype.refreshDimmerBitmap = function () {
   if (this._dimmerSprite) {
-    var bitmap = this._dimmerSprite.bitmap;
-    var w = this.width;
-    var h = this.height;
-    var m = this.padding;
-    var c1 = this.dimColor1();
-    var c2 = this.dimColor2();
+    const bitmap = this._dimmerSprite.bitmap;
+    const w = this.width > 0 ? this.width /* + 8 */ : 0;
+    const h = this.height;
+    const m = this.padding;
+    const c1 = this.dimColor1(); // ColorManager.dimColor1();
+    const c2 = this.dimColor2(); // ColorManager.dimColor2();
     bitmap.resize(w, h);
     bitmap.gradientFillRect(0, 0, w, m, c2, c1, true);
     bitmap.fillRect(0, m, w, h - m * 2, c1);
@@ -749,4 +923,16 @@ Window_Base.prototype.reserveFaceImages = function () {
   $gameParty.members().forEach(function (actor) {
     ImageManager.reserveFace(actor.faceName());
   }, this);
+};
+
+Window_Base.prototype.playCursorSound = function () {
+  SoundManager.playCursor();
+};
+
+Window_Base.prototype.playOkSound = function () {
+  SoundManager.playOk();
+};
+
+Window_Base.prototype.playBuzzerSound = function () {
+  SoundManager.playBuzzer();
 };

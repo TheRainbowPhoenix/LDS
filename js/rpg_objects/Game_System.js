@@ -17,6 +17,7 @@ Game_System.prototype.initialize = function () {
   this._escapeCount = 0;
   this._saveCount = 0;
   this._versionId = 0;
+  this._savefileId = 0;
   this._framesOnSave = 0;
   this._sceneFramesOnSave = 0;
   this._bgmOnSave = null;
@@ -51,6 +52,10 @@ Game_System.prototype.isRussian = function () {
 
 Game_System.prototype.isSideView = function () {
   return $dataSystem.optSideView;
+};
+
+Game_System.prototype.isAutosaveEnabled = function () {
+  return $dataSystem.optAutosave || false;
 };
 
 Game_System.prototype.isSaveEnabled = function () {
@@ -121,6 +126,14 @@ Game_System.prototype.versionId = function () {
   return this._versionId;
 };
 
+Game_System.prototype.savefileId = function () {
+  return this._savefileId || 0;
+};
+
+Game_System.prototype.setSavefileId = function (savefileId) {
+  this._savefileId = savefileId;
+};
+
 Game_System.prototype.windowTone = function () {
   return this._windowTone || $dataSystem.windowTone;
 };
@@ -186,9 +199,9 @@ Game_System.prototype.playtime = function () {
 };
 
 Game_System.prototype.playtimeText = function () {
-  var hour = Math.floor(this.playtime() / 60 / 60);
-  var min = Math.floor(this.playtime() / 60) % 60;
-  var sec = this.playtime() % 60;
+  const hour = Math.floor(this.playtime() / 60 / 60);
+  const min = Math.floor(this.playtime() / 60) % 60;
+  const sec = this.playtime() % 60;
   return hour.padZero(2) + ":" + min.padZero(2) + ":" + sec.padZero(2);
 };
 
@@ -214,4 +227,26 @@ Game_System.prototype.replayWalkingBgm = function () {
 
 Game_System.prototype.saveWalkingBgm2 = function () {
   this._walkingBgm = $dataMap.bgm;
+};
+
+Game_System.prototype.mainFontFace = function () {
+  let fallbackFonts =
+    $dataSystem.advanced && $dataSystem.advanced.fallbackFonts
+      ? $dataSystem.advanced.fallbackFonts
+      : "Verdana, sans-serif";
+  return "rmmz-mainfont, " + fallbackFonts;
+};
+
+Game_System.prototype.numberFontFace = function () {
+  return "rmmz-numberfont, " + this.mainFontFace();
+};
+
+Game_System.prototype.mainFontSize = function () {
+  return $dataSystem.advanced && $dataSystem.advanced.fontSize
+    ? $dataSystem.advanced.fontSize
+    : 27;
+};
+
+Game_System.prototype.windowPadding = function () {
+  return 12;
 };

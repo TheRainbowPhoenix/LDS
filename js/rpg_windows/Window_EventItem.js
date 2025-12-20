@@ -21,6 +21,18 @@ Window_EventItem.prototype.initialize = function (messageWindow) {
   this.setHandler("cancel", this.onCancel.bind(this));
 };
 
+Window_EventItem.prototype.setMessageWindow = function(messageWindow) {
+    this._messageWindow = messageWindow;
+};
+
+Window_EventItem.prototype.createCancelButton = function() {
+    if (ConfigManager.touchUI) {
+        this._cancelButton = new Sprite_Button("cancel");
+        this._cancelButton.visible = false;
+        this.addChild(this._cancelButton);
+    }
+};
+
 Window_EventItem.prototype.windowHeight = function () {
   return this.fittingHeight(this.numVisibleRows());
 };
@@ -35,6 +47,12 @@ Window_EventItem.prototype.start = function () {
   this.select(0);
   this.open();
   this.activate();
+};
+
+Window_EventItem.prototype.updateCancelButton = function() {
+    if (this._cancelButton) {
+        this._cancelButton.visible = this.isOpen();
+    }
 };
 
 Window_EventItem.prototype.updatePlacement = function () {

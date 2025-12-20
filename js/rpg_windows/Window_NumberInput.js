@@ -18,6 +18,11 @@ Window_NumberInput.prototype.initialize = function (messageWindow) {
   this.openness = 0;
   this.createButtons();
   this.deactivate();
+    this._canRepeat = false;
+};
+
+Window_NumberInput.prototype.setMessageWindow = function(messageWindow) {
+    this._messageWindow = messageWindow;
 };
 
 Window_NumberInput.prototype.start = function () {
@@ -70,6 +75,22 @@ Window_NumberInput.prototype.spacing = function () {
 Window_NumberInput.prototype.itemWidth = function () {
   return 32;
 };
+
+Window_NumberInput.prototype.itemRect = function(index) {
+    const rect = Window_Selectable.prototype.itemRect.call(this, index);
+    const innerMargin = this.innerWidth - this.maxCols() * this.itemWidth();
+    rect.x += innerMargin / 2;
+    return rect;
+};
+
+Window_NumberInput.prototype.isScrollEnabled = function() {
+    return false;
+};
+
+Window_NumberInput.prototype.isHoverEnabled = function() {
+    return false;
+};
+
 
 Window_NumberInput.prototype.createButtons = function () {
   var bitmap = ImageManager.loadSystem("ButtonSet");

@@ -143,6 +143,7 @@ Window_Message.prototype.startMessage = function () {
   this.updatePlacement();
   this.updateBackground();
   this.open();
+  // this._nameBoxWindow.start();
 };
 
 Window_Message.prototype.updatePlacement = function () {
@@ -308,6 +309,10 @@ Window_Message.prototype.newPage = function (textState) {
   textState.y = 0;
   textState.left = this.newLineX();
   textState.height = this.calcTextHeight(textState, false);
+};
+
+Window_Message.prototype.updateSpeakerName = function() {
+    this._nameBoxWindow.setName($gameMessage.speakerName());
 };
 
 Window_Message.prototype.loadMessageFace = function () {

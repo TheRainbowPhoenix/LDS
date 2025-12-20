@@ -650,6 +650,23 @@ Window_Selectable.prototype.clearItem = function (index) {
   this.contents.clearRect(rect.x, rect.y, rect.width, rect.height);
 };
 
+Window_Selectable.prototype.drawItemBackground = function(index) {
+    const rect = this.itemRect(index);
+    // this.drawBackgroundRect(rect);
+};
+
+Window_Selectable.prototype.drawBackgroundRect = function(rect) {
+    const c1 = ColorManager.itemBackColor1();
+    const c2 = ColorManager.itemBackColor2();
+    const x = rect.x;
+    const y = rect.y;
+    const w = rect.width;
+    const h = rect.height;
+    this.contentsBack.gradientFillRect(x, y, w, h, c1, c2, true);
+    this.contentsBack.strokeRect(x, y, w, h, c1);
+};
+
+
 Window_Selectable.prototype.redrawItem = function (index) {
   if (index >= 0) {
     this.clearItem(index);

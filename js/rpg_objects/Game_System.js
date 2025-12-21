@@ -234,7 +234,7 @@ Game_System.prototype.mainFontFace = function () {
     $dataSystem.advanced && $dataSystem.advanced.fallbackFonts
       ? $dataSystem.advanced.fallbackFonts
       : "Verdana, sans-serif";
-  return "rmmz-mainfont, " + fallbackFonts;
+  return "rmmz-mainfont, GameFont, " + fallbackFonts;
 };
 
 Game_System.prototype.numberFontFace = function () {

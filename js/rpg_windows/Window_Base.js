@@ -98,11 +98,13 @@ Window_Base.prototype.loadWindowskin = function () {
 };
 
 Window_Base.prototype.updatePadding = function () {
-  this.padding = $gameSystem.windowPadding();
+  this.padding = this.standardPadding();
+  // this.padding = $gameSystem && $gameSystem.windowPadding ? $gameSystem.windowPadding() : this.standardPadding(); // [MZ]: this.padding = $gameSystem.windowPadding();
 };
 
 Window_Base.prototype.updateBackOpacity = function () {
-  this.backOpacity = this.standardBackOpacity();
+  this.backOpacity = this.standardBackOpacity(); 
+  // this.backOpacity = $gameSystem && $gameSystem.windowOpacity ? $gameSystem.windowOpacity() : this.standardBackOpacity(); // [MZ]: = $gameSystem.windowOpacity();
 };
 
 Window_Base.prototype.contentsWidth = function () {
@@ -115,6 +117,11 @@ Window_Base.prototype.contentsHeight = function () {
 
 Window_Base.prototype.fittingHeight = function (numLines) {
   return numLines * this.lineHeight() + this.standardPadding() * 2;
+  // return numLines * this.lineHeight() + (
+  //   $gameSystem && $gameSystem.windowPadding ?
+  //   $gameSystem.windowPadding() :
+  //   this.standardPadding()
+  // ) * 2; // [MZ]:  $gameSystem.windowPadding() * 2;
 };
 
 Window_Base.prototype.updateTone = function () {

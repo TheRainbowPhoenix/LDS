@@ -41,6 +41,8 @@ DataManager._globalId = "RPGMV";
 DataManager._lastAccessedId = 1;
 DataManager._errorUrl = null;
 DataManager._autoSaveFileId = 0;
+DataManager._globalInfo = null;
+DataManager._errors = [];
 
 DataManager._databaseFiles = [
   { name: "$dataActors", src: "Actors.json" },
@@ -59,13 +61,25 @@ DataManager._databaseFiles = [
   { name: "$dataMapInfos", src: "MapInfos.json" },
 ];
 
+DataManager.removeInvalidGlobalInfo = function () {
+  const globalInfo = this._globalInfo;
+  for (const info of globalInfo) {
+    const savefileId = globalInfo.indexOf(info);
+    if (!this.savefileExists(savefileId)) {
+      delete globalInfo[savefileId];
+    }
+  }
+};
+
+DataManager.isGlobalInfoLoaded = function () {
+  return !!this._globalInfo;
+};
+
 DataManager.loadDatabase = function () {
-  var test = this.isBattleTest() || this.isEventTest();
-  var prefix = test ? "Test_" : "";
-  for (var i = 0; i < this._databaseFiles.length; i++) {
-    var name = this._databaseFiles[i].name;
-    var src = this._databaseFiles[i].src;
-    this.loadDataFile(name, prefix + src);
+  const test = this.isBattleTest() || this.isEventTest();
+  const prefix = test ? "Test_" : "";
+  for (const databaseFile of this._databaseFiles) {
+    this.loadDataFile(databaseFile.name, prefix + databaseFile.src);
   }
   if (this.isEventTest()) {
     this.loadDataFile("$testEvent", prefix + "Event.json");
@@ -73,29 +87,35 @@ DataManager.loadDatabase = function () {
 };
 
 DataManager.loadDataFile = function (name, src) {
-  var xhr = new XMLHttpRequest();
-  var url = "data/" + src;
+  const xhr = new XMLHttpRequest();
+  const url = "data/" + src;
+  window[name] = null;
   xhr.open("GET", url);
   xhr.overrideMimeType("application/json");
-  xhr.onload = function () {
-    if (xhr.status < 400) {
-      window[name] = JSON.parse(xhr.responseText);
-      DataManager.onLoad(window[name]);
-    }
-  };
-  xhr.onerror =
-    this._mapLoader ||
-    function () {
-      DataManager._errorUrl = DataManager._errorUrl || url;
-    };
-  window[name] = null;
+  xhr.onload = () => this.onXhrLoad(xhr, name, src, url);
+  xhr.onerror = () => this.onXhrError(name, src, url);
   xhr.send();
+};
+
+DataManager.onXhrLoad = function (xhr, name, src, url) {
+  if (xhr.status < 400) {
+    window[name] = JSON.parse(xhr.responseText);
+    this.onLoad(window[name]);
+  } else {
+    this.onXhrError(name, src, url);
+  }
+};
+
+DataManager.onXhrError = function (name, src, url) {
+  const error = { name: name, src: src, url: url };
+  this._errors.push(error);
+  this._errorUrl = this._errorUrl || url;
 };
 
 DataManager.isDatabaseLoaded = function () {
   this.checkError();
-  for (var i = 0; i < this._databaseFiles.length; i++) {
-    if (!window[this._databaseFiles[i].name]) {
+  for (const databaseFile of this._databaseFiles) {
+    if (!window[databaseFile.name]) {
       return false;
     }
   }
@@ -107,7 +127,7 @@ DataManager.loadMapData = function (mapId) {
     var filename = "Map%1.json".format(mapId.padZero(3));
     this._mapLoader = ResourceHandler.createLoader(
       "data/" + filename,
-      this.loadDataFile.bind(this, "$dataMap", filename),
+      this.loadDataFile.bind(this, "$dataMap", filename)
     );
     this.loadDataFile("$dataMap", filename);
   } else {
@@ -137,18 +157,26 @@ DataManager.onLoad = function (object) {
   } else {
     array = object;
   }
-  if (Array.isArray(array)) {
-    for (var i = 0; i < array.length; i++) {
-      var data = array[i];
-      if (data && data.note !== undefined) {
-        this.extractMetadata(data);
-      }
-    }
-  }
+  this.extractArrayMetadata(array);
+
   if (object === $dataSystem) {
     Decrypter.hasEncryptedImages = !!object.hasEncryptedImages;
     Decrypter.hasEncryptedAudio = !!object.hasEncryptedAudio;
     Scene_Boot.loadSystemImages();
+  }
+};
+
+DataManager.isMapObject = function (object) {
+  return !!(object.data && object.events);
+};
+
+DataManager.extractArrayMetadata = function (array) {
+  if (Array.isArray(array)) {
+    for (const data of array) {
+      if (data && "note" in data) {
+        this.extractMetadata(data);
+      }
+    }
   }
 };
 
@@ -172,6 +200,13 @@ DataManager.extractMetadata = function (data) {
 DataManager.checkError = function () {
   if (DataManager._errorUrl) {
     throw new Error("Failed to load: " + DataManager._errorUrl);
+  }
+  if (this._errors.length > 0) {
+    const error = this._errors.shift();
+    const retry = () => {
+      this.loadDataFile(error.name, error.src);
+    };
+    throw ["LoadError", error.url, retry];
   }
 };
 
@@ -219,10 +254,11 @@ DataManager.setupNewGame = function () {
   this.createGameObjects();
   this.selectSavefileForNewGame();
   $gameParty.setupStartingMembers();
+  if ($gamePlayer.setupForNewGame) $gamePlayer.setupForNewGame();
   $gamePlayer.reserveTransfer(
     $dataSystem.startMapId,
     $dataSystem.startX,
-    $dataSystem.startY,
+    $dataSystem.startY
   );
   Graphics.frameCount = 0;
   SceneManager.resetFrameCount();
@@ -317,6 +353,33 @@ DataManager.latestSavefileId = function () {
   return savefileId;
 };
 
+DataManager._latestSavefileId = function () {
+  const globalInfo = this._globalInfo || this.loadGlobalInfo();
+  const validInfo = globalInfo.slice(1).filter((x) => x);
+  const latest = Math.max(...validInfo.map((x) => x.timestamp));
+  const index = globalInfo.findIndex((x) => x && x.timestamp === latest);
+  return index > 0 ? index : 0;
+};
+
+DataManager.earliestSavefileId = function () {
+  const globalInfo = this._globalInfo || this.loadGlobalInfo();
+  const validInfo = globalInfo.slice(1).filter((x) => x);
+  const earliest = Math.min(...validInfo.map((x) => x.timestamp));
+  const index = globalInfo.findIndex((x) => x && x.timestamp === earliest);
+  return index > 0 ? index : 0;
+};
+
+DataManager.emptySavefileId = function () {
+  const globalInfo = this._globalInfo || this.loadGlobalInfo();
+  const maxSavefiles = this.maxSavefiles();
+  if (globalInfo.length < maxSavefiles) {
+    return Math.max(1, globalInfo.length);
+  } else {
+    const index = globalInfo.slice(1).findIndex((x) => !x);
+    return index >= 0 ? index + 1 : -1;
+  }
+};
+
 DataManager.loadAllSavefileImages = function () {
   var globalInfo = this.loadGlobalInfo();
   if (globalInfo) {
@@ -344,6 +407,16 @@ DataManager.loadSavefileImages = function (info) {
 
 DataManager.maxSavefiles = function () {
   return 20;
+};
+
+DataManager.savefileInfo = function (savefileId) {
+  const globalInfo = this._globalInfo || this.loadGlobalInfo();
+  return globalInfo[savefileId] ? globalInfo[savefileId] : null;
+};
+
+DataManager.savefileExists = function (savefileId) {
+  const saveName = this.makeSavename(savefileId);
+  return StorageManager.exists(saveName);
 };
 
 DataManager.saveGame = function (savefileId) {
@@ -401,6 +474,10 @@ DataManager.loadGameWithoutRescue = function (savefileId) {
   } else {
     return false;
   }
+};
+
+DataManager.makeSavename = function (savefileId) {
+  return "file%1".format(savefileId);
 };
 
 DataManager.selectSavefileForNewGame = function () {
@@ -464,6 +541,10 @@ DataManager.extractSaveContents = function (contents) {
   $gameParty = contents.party;
   $gameMap = contents.map;
   $gamePlayer = contents.player;
+};
+
+DataManager.correctDataErrors = function () {
+  $gameParty.removeInvalidMembers();
 };
 
 DataManager.setAutoSaveFileId = function (autoSaveFileId) {

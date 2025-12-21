@@ -142,7 +142,7 @@ Window_Selectable.prototype.bottomRow = function () {
   return Math.max(0, this.topRow() + this.maxPageRows() - 1);
 };
 
-Window_Selectable.prototype.setBottomRow = function (row) {
+Window_Selectable.prototype.setBottomRow = function(row) {
   var oy = (row + 1) * this.itemHeight() - this.height + this.padding * 2;
   this.setOy(oy - this._scrollY);
 };
@@ -476,16 +476,16 @@ Window_Selectable.prototype.onTouch = function (triggered) {
 
 Window_Selectable.prototype.hitTest = function (x, y) {
   if (this.isContentsArea(x, y)) {
-    var cx = x - this.padding;
-    var cy = y - this.padding + this.origin.y;
-    var topIndex = this.topIndex();
-    var maxPageItems = this.maxPageItems() + this.maxCols();
-    for (var i = 0; i < maxPageItems; i++) {
-      var index = topIndex + i;
+    const cx = x - this.padding;
+    const cy = y - this.padding + this.origin.y;
+    const topIndex = this.topIndex();
+    const maxPageItems = this.maxPageItems() + this.maxCols();
+    for (let i = 0; i < maxPageItems; i++) {
+      const index = topIndex + i;
       if (index < this.maxItems()) {
-        var rect = this.itemRect(index);
-        var right = rect.x + rect.width;
-        var bottom = rect.y + rect.height;
+        const rect = this.itemRect(index);
+        const right = rect.x + rect.width;
+        const bottom = rect.y + rect.height;
         if (cx >= rect.x && cy >= rect.y && cx < right && cy < bottom) {
           return index;
         }
@@ -629,7 +629,7 @@ Window_Selectable.prototype.isCurrentItemEnabled = function () {
   return true;
 };
 
-Window_Selectable.prototype.drawAllItems = function () {
+Window_Selectable.prototype.new_drawAllItems = function () {
   const topIndex = this.topIndex();
   let max = this.maxVisibleItems ? this.maxVisibleItems() : this.maxPageItems();
   for (let i = 0; i < max; i++) {
@@ -642,6 +642,24 @@ Window_Selectable.prototype.drawAllItems = function () {
     }
   }
 };
+
+Window_Selectable.prototype.drawAllItems = function() {
+    var topIndex = this.topIndex();
+    for (var i = 0; i < this.maxPageItems(); i++) {
+        var index = topIndex + i;
+        if (index < this.maxItems()) {
+            this.drawItem(index);
+        }
+    }
+    var topIndex = this.topIndex() + this.maxPageItems();
+    for (var i = 0; i < this.maxCols(); i++) {
+        var index = topIndex + i;
+        if (index < this.maxItems()) {
+            this.drawItem(index);
+        }
+    }
+};
+
 
 Window_Selectable.prototype.drawItem = function (index) {};
 

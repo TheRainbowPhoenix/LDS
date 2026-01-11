@@ -37,6 +37,7 @@ CY_Scene_Options.prototype.constructor = CY_Scene_Options;
 CY_Scene_Options.MAX_OPTIONS_WIDTH = 816; // Max width for options content
 CY_Scene_Options.TAB_BAR_HEIGHT = 48;
 CY_Scene_Options.ACTION_BAR_HEIGHT = 48;
+CY_Scene_Options.LENS_PADDING = 26; // Padding to compensate for CRT lens distortion
 
 //-----------------------------------------------------------------------------
 // Initialization
@@ -115,7 +116,8 @@ CY_Scene_Options.prototype.createGradientBackground = function() {
 
 /**
  * Apply CRT lens distortion filter to the entire scene.
- * Creates barrel distortion (curved edges) and ghost shadow effect.
+ * Creates pincushion distortion (concave/inward curved edges), sharp ghost shadow,
+ * and edge noise trail glitch effect (dead pixel lines on left/right edges).
  */
 CY_Scene_Options.prototype.applyCRTFilter = function() {
     if (!PIXI.Filter) return;
@@ -129,17 +131,24 @@ CY_Scene_Options.prototype.applyCRTFilter = function() {
         uniform float uDistortion;
         uniform float uGhostOffset;
         uniform float uGhostOpacity;
+        uniform float uEdgeNoiseWidth;
         
-        // Barrel distortion function
-        vec2 barrelDistortion(vec2 coord, float amt) {
+        // Pseudo-random function
+        float rand(vec2 co) {
+            return fract(sin(dot(co.xy, vec2(12.9898, 78.233))) * 43758.5453);
+        }
+        
+        // Pincushion distortion function (concave - edges curve inward)
+        vec2 pincushionDistortion(vec2 coord, float amt) {
             vec2 cc = coord - 0.5;
             float dist = dot(cc, cc);
-            return coord + cc * dist * amt;
+            // Negative amount creates pincushion (concave) effect
+            return coord + cc * dist * (-amt);
         }
         
         void main(void) {
-            // Apply barrel distortion for CRT lens curve effect
-            vec2 uv = barrelDistortion(vTextureCoord, uDistortion);
+            // Apply pincushion distortion for concave CRT lens curve effect
+            vec2 uv = pincushionDistortion(vTextureCoord, uDistortion);
             
             // Check if we're outside the screen after distortion
             if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
@@ -147,24 +156,65 @@ CY_Scene_Options.prototype.applyCRTFilter = function() {
                 return;
             }
             
-            // Sample main color
+            // Sample main color - no blur, sharp sampling
             vec4 color = texture2D(uSampler, uv);
             
-            // Ghost shadow effect - sample slightly offset and darker
-            vec2 ghostUV = barrelDistortion(vTextureCoord + vec2(uGhostOffset, uGhostOffset * 0.5), uDistortion);
+            // Sharp ghost shadow effect - offset sample without any blur
+            vec2 ghostUV = pincushionDistortion(vTextureCoord + vec2(uGhostOffset, uGhostOffset * 0.6), uDistortion);
             if (ghostUV.x >= 0.0 && ghostUV.x <= 1.0 && ghostUV.y >= 0.0 && ghostUV.y <= 1.0) {
                 vec4 ghost = texture2D(uSampler, ghostUV);
-                // Add ghost as a darker shadow behind
-                color.rgb = mix(color.rgb, ghost.rgb * 0.3, uGhostOpacity);
+                // Blend ghost as a sharp darker shadow behind (additive dark)
+                color.rgb = color.rgb - ghost.rgb * uGhostOpacity;
             }
             
-            // Subtle scanlines
-            float scanline = sin(uv.y * 400.0) * 0.5 + 0.5;
-            scanline = pow(scanline, 2.0) * 0.03;
+            // Edge noise trail glitch effect (dead pixel lines on left and right edges)
+            float edgeWidth = uEdgeNoiseWidth;
+            float leftEdge = smoothstep(0.0, edgeWidth, vTextureCoord.x);
+            float rightEdge = smoothstep(0.0, edgeWidth, 1.0 - vTextureCoord.x);
+            
+            // Create blocky noise pattern (6px x 2px rectangles feel)
+            float blockY = floor(vTextureCoord.y * 180.0); // Vertical blocks
+            float blockTime = floor(uTime * 8.0); // Slow movement
+            
+            // Left edge glitch
+            if (vTextureCoord.x < edgeWidth) {
+                float noiseVal = rand(vec2(blockY * 0.1, blockTime + 1.0));
+                float glitchChance = rand(vec2(blockY, blockTime * 0.5));
+                
+                // Random glitch blocks - some bright, some dark (dead pixels)
+                if (glitchChance > 0.985) {
+                    // Bright glitch pixel
+                    float intensity = noiseVal * 0.4 * (1.0 - leftEdge);
+                    color.rgb += vec3(intensity * 0.3, intensity * 0.8, intensity * 0.9);
+                } else if (glitchChance > 0.85) {
+                    // Dark dead pixel
+                    color.rgb *= leftEdge + 0.1;
+                }
+            }
+            
+            // Right edge glitch
+            if (vTextureCoord.x > 1.0 - edgeWidth) {
+                float noiseVal = rand(vec2(blockY * 0.1 + 100.0, blockTime + 2.0));
+                float glitchChance = rand(vec2(blockY + 50.0, blockTime * 0.5 + 1.0));
+                
+                // Random glitch blocks
+                if (glitchChance > 0.985) {
+                    // Bright glitch pixel (cyan-ish)
+                    float intensity = noiseVal * 0.4 * (1.0 - rightEdge);
+                    color.rgb += vec3(intensity * 0.2, intensity * 0.7, intensity * 0.8);
+                } else if (glitchChance > 0.85) {
+                    // Dark dead pixel
+                    color.rgb *= rightEdge + 0.1;
+                }
+            }
+            
+            // Very subtle scanlines (reduced to not affect readability)
+            float scanline = sin(uv.y * 600.0) * 0.5 + 0.5;
+            scanline = pow(scanline, 3.0) * 0.015;
             color.rgb -= scanline;
             
             // Slight vignette at edges
-            float vignette = 1.0 - dot(vTextureCoord - 0.5, vTextureCoord - 0.5) * 0.5;
+            float vignette = 1.0 - dot(vTextureCoord - 0.5, vTextureCoord - 0.5) * 0.3;
             color.rgb *= vignette;
             
             gl_FragColor = color;
@@ -174,9 +224,10 @@ CY_Scene_Options.prototype.applyCRTFilter = function() {
     try {
         this._crtFilter = new PIXI.Filter(null, crtFragmentShader, {
             uTime: 0.0,
-            uDistortion: 0.08,      // Barrel distortion amount
-            uGhostOffset: 0.003,    // Ghost shadow offset
-            uGhostOpacity: 0.15     // Ghost shadow opacity
+            uDistortion: 0.16,      // Pincushion distortion amount (2x stronger)
+            uGhostOffset: 0.002,    // Sharp ghost shadow offset
+            uGhostOpacity: 0.12,    // Ghost shadow opacity (subtle but visible)
+            uEdgeNoiseWidth: 0.025  // Width of edge noise effect (2.5% of screen)
         });
         
         // Apply filter to the entire scene
@@ -188,7 +239,7 @@ CY_Scene_Options.prototype.applyCRTFilter = function() {
 };
 
 /**
- * Update CRT shader time uniform for subtle animation.
+ * Update CRT shader time uniform for animation.
  */
 CY_Scene_Options.prototype.updateCRTFilter = function() {
     if (this._crtFilter && this._crtFilter.uniforms) {
@@ -219,11 +270,13 @@ CY_Scene_Options.prototype.getScreenOffsets = function() {
  */
 CY_Scene_Options.prototype.createTabBar = function() {
     var offsets = this.getScreenOffsets();
+    var lensPadding = CY_Scene_Options.LENS_PADDING;
     
     this._tabBar = new CY_Window_TabBar(['SOUND', 'CONTROLS', 'GAMEPLAY']);
-    // Center the tab bar horizontally
+    // Center the tab bar horizontally, add top padding for lens compensation
     var tabBarX = Math.floor((Graphics.boxWidth - this._tabBar.width) / 2);
-    this._tabBar.move(tabBarX, offsets.y, this._tabBar.width, this._tabBar.height);
+    var tabBarY = offsets.y + lensPadding;
+    this._tabBar.move(tabBarX, tabBarY, this._tabBar.width, this._tabBar.height);
     this._tabBar.setHandler('ok', this.onTabOk.bind(this));
     this._tabBar.setHandler('cancel', this.popScene.bind(this));
     this._tabBar.opacity = 0; // Transparent window chrome
@@ -240,12 +293,14 @@ CY_Scene_Options.prototype.createTabBar = function() {
  */
 CY_Scene_Options.prototype.createOptionsWindow = function() {
     var offsets = this.getScreenOffsets();
+    var lensPadding = CY_Scene_Options.LENS_PADDING;
     var maxWidth = CY_Scene_Options.MAX_OPTIONS_WIDTH;
     var width = Math.min(maxWidth, Graphics.boxWidth - 40);
     var x = Math.floor((Graphics.boxWidth - width) / 2); // Centered within boxWidth
-    // Position below tab bar (tab bar is at offsets.y, add its height)
-    var y = offsets.y + CY_Scene_Options.TAB_BAR_HEIGHT;
-    var height = offsets.fullHeight - CY_Scene_Options.TAB_BAR_HEIGHT - CY_Scene_Options.ACTION_BAR_HEIGHT;
+    // Position below tab bar with lens padding
+    var y = offsets.y + lensPadding + CY_Scene_Options.TAB_BAR_HEIGHT;
+    // Height accounts for both top and bottom lens padding
+    var height = offsets.fullHeight - CY_Scene_Options.TAB_BAR_HEIGHT - CY_Scene_Options.ACTION_BAR_HEIGHT - (lensPadding * 2);
 
     this._optionsWindow = new CY_Window_OptionsList(x, y, width, height);
     this._optionsWindow.setHandler('cancel', this.onOptionsCancel.bind(this));
@@ -265,9 +320,11 @@ CY_Scene_Options.prototype.createOptionsWindow = function() {
  */
 CY_Scene_Options.prototype.createActionBar = function() {
     var offsets = this.getScreenOffsets();
+    var lensPadding = CY_Scene_Options.LENS_PADDING;
     var width = offsets.fullWidth;
     var height = CY_Scene_Options.ACTION_BAR_HEIGHT;
-    var y = offsets.fullHeight - height + offsets.y;
+    // Position with bottom lens padding
+    var y = offsets.fullHeight - height - lensPadding + offsets.y;
     
     this._actionBar = new CY_Window_ActionBar();
     this._actionBar.move(offsets.x, y, width, height);

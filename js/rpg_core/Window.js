@@ -14,7 +14,18 @@ Window.prototype.constructor = Window;
 
 Window.prototype.initialize = function () {
   var baseInstance = new PIXI.Container();
-  Object.assign(this, baseInstance);
+  // Copy only non-function properties to avoid shadowing prototype methods
+  for (var key in baseInstance) {
+    if (baseInstance.hasOwnProperty(key) && typeof baseInstance[key] !== 'function') {
+      this[key] = baseInstance[key];
+    }
+  }
+  // Ensure we have the PIXI.Container's core internals
+  if (baseInstance.children) this.children = baseInstance.children;
+  if (baseInstance.parent !== undefined) this.parent = baseInstance.parent;
+  if (baseInstance.transform) this.transform = baseInstance.transform;
+  if (baseInstance.worldAlpha !== undefined) this.worldAlpha = baseInstance.worldAlpha;
+  if (baseInstance._bounds) this._bounds = baseInstance._bounds;
 
   this._isWindow = true;
   this._windowskin = null;

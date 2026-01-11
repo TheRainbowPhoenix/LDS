@@ -53,6 +53,7 @@ const files = [
   "js/libs/pixi-picture.js",
   "js/libs/pixi-tilemap.js",
   "js/rpg_core.js",
+  "js/pz_core.js",
   "js/rpg_managers.js",
   "js/rpg_objects.js",
   "js/rpg_scenes.js",

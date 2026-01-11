@@ -13,6 +13,8 @@ Graphics._cssFontLoading =
 Graphics._fontLoaded = null;
 Graphics._videoVolume = 1;
 
+Graphics.phaser = null;
+
 /**
  * Initializes the graphics system.
  *
@@ -263,6 +265,15 @@ Graphics.tickEnd = function () {
 Graphics.render = function (stage) {
   if (this._skipCount <= 0) {
     var startTime = Date.now();
+
+    // PHASER-CE-BEGIN
+    // Update Phaser Logic before rendering
+    if (this.phaser && this.phaser.isRunning) {
+        // Pass elapsed time or current time to Phaser
+        this.phaser.update(startTime);
+    }
+    // PHASER-CE-END
+
     if (stage) {
       this._renderer.render(stage);
       if (this._renderer.gl && this._renderer.gl.flush) {
@@ -1667,7 +1678,7 @@ Graphics._onKeyDown = function (event) {
  */
 Graphics._onTouchEnd = function (event) {
   if (!this._videoUnlocked) {
-    this._video.play();
+    // this._video.play(); // TODO: fix this bug
     this._videoUnlocked = true;
   }
   if (this._isVideoVisible() && this._video.paused) {

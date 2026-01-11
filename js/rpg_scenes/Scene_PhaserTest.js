@@ -1,0 +1,93 @@
+//=============================================================================
+// Scene_PhaserTest
+// A "Hello World" scene to verify the RPG Maker <-> Phaser Bridge
+//=============================================================================
+
+function Scene_PhaserTest() {
+    this.initialize.apply(this, arguments);
+}
+
+Scene_PhaserTest.prototype = Object.create(Scene_Base.prototype);
+Scene_PhaserTest.prototype.constructor = Scene_PhaserTest;
+
+Scene_PhaserTest.prototype.initialize = function() {
+    Scene_Base.prototype.initialize.call(this);
+};
+
+Scene_PhaserTest.prototype.create = function() {
+    Scene_Base.prototype.create.call(this);
+    this.createWindowLayer(); // If you want RMMV windows on top
+    
+    // Phaser should already be init by Scene_Boot
+    if (Graphics.phaser && Graphics.phaser.stage) {
+        this.runPhaserLogic();
+        // Add the Phaser Stage (which is a PIXI.Container) to this Scene
+        this.addChild(Graphics.phaser.stage);
+    } else {
+        console.error("Phaser not initialized in Scene_Boot!");
+    }
+};
+
+Scene_PhaserTest.prototype.runPhaserLogic = function() {
+    var game = Graphics.phaser;
+    
+    // Clear previous state/world children if you want a fresh start
+    game.world.removeAll(); 
+
+    // Define the state logic
+    var state = {
+        create: function() {
+            // -- Texture Generation --
+            var bmd = game.add.bitmapData(64, 64);
+            bmd.ctx.fillStyle = '#00FF00'; // Green box
+            bmd.ctx.fillRect(0,0,64,64);
+            
+            // Start Physics
+            game.physics.startSystem(Phaser.Physics.ARCADE);
+            
+            // -- Sprite --
+            this.box = game.add.sprite(game.world.centerX, 50, bmd);
+            this.box.anchor.set(0.5);
+            
+            game.physics.arcade.enable(box);
+            box.body.gravity.y = 500;
+            box.body.collideWorldBounds = true;
+            box.body.bounce.set(0.7);
+            
+            // Add some text
+            var style = { font: "bold 32px Arial", fill: "#fff", boundsAlignH: "center", boundsAlignV: "middle" };
+            this.text = game.add.text(0, 0, "Phaser running in RMMV!", style);
+            this.text.setTextBounds(0, 100, 800, 100);
+        },
+
+        update: function(game) {
+            // Rotate the box
+            this.box.rotation += 0.01;
+        }
+    };
+
+    game.state.add('TestLevel', state);
+    game.state.start('TestLevel');
+};
+
+Scene_PhaserTest.prototype.update = function() {
+    // Run RMMV Scene update
+    Scene_Base.prototype.update.call(this);
+
+    // Escape Key to return to Title/Map
+    if (Input.isTriggered('cancel') || Input.isTriggered('menu')) {
+        this.popScene();
+    }
+};
+
+Scene_PhaserTest.prototype.terminate = function() {
+    Scene_Base.prototype.terminate.call(this);
+    // Detach stage so RMMV doesn't destroy the singleton Phaser stage
+    if (Graphics.phaser && Graphics.phaser.stage) {
+        // Detach the stage so it doesn't get destroyed by RMMV scene cleanup
+        // if you want to persist the Phaser state.
+        this.removeChild(Graphics.phaser.stage); 
+        // Optional: Pause logic
+        Graphics.phaser.paused = true; 
+    }
+};

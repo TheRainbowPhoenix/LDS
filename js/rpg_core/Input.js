@@ -8,6 +8,10 @@ function Input() {
   throw new Error("This is a static class");
 }
 
+// PHASER-CE PATCH
+Input._rawCurrentState = {};
+// PHASER-CE END
+
 /**
  * Initializes the input system.
  *
@@ -108,6 +112,7 @@ Input.clear = function () {
   this._dir8 = 0;
   this._preferredAxis = "";
   this._date = 0;
+  this._rawCurrentState = {};
 };
 
 /**
@@ -290,6 +295,8 @@ Input._setupEventHandlers = function () {
  * @private
  */
 Input._onKeyDown = function (event) {
+  this._rawCurrentState[event.keyCode] = true;
+
   if (this._shouldPreventDefault(event.keyCode)) {
     event.preventDefault();
   }
@@ -332,6 +339,8 @@ Input._shouldPreventDefault = function (keyCode) {
  * @private
  */
 Input._onKeyUp = function (event) {
+  this._rawCurrentState[event.keyCode] = false;
+
   var buttonName = this.keyMapper[event.keyCode];
   if (buttonName) {
     this._currentState[buttonName] = false;
@@ -496,3 +505,9 @@ Input._makeNumpadDirection = function (x, y) {
 Input._isEscapeCompatible = function (keyName) {
   return keyName === "cancel" || keyName === "menu";
 };
+
+// PHASER-CE BEGIN
+Input.isRawPressed = function(keyCode) {
+  return !!this._rawCurrentState[keyCode];
+};
+// PHASER-CE END

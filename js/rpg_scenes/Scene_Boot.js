@@ -106,6 +106,12 @@ Scene_Boot.prototype.isGameFontLoaded = function () {
 Scene_Boot.prototype.start = function () {
   Scene_Base.prototype.start.call(this);
   SoundManager.preloadImportantSounds();
+
+  // PHASER-CE-BEGIN
+  this.resizeScreen(); 
+  this.initPhaserBridge();
+  // PHASER-CE-END
+
   if (DataManager.isBattleTest()) {
     DataManager.setupBattleTest();
     SceneManager.goto(Scene_Battle);
@@ -117,6 +123,24 @@ Scene_Boot.prototype.start = function () {
   }
   this.resizeScreen();
   this.updateDocumentTitle();
+};
+
+Scene_Boot.prototype.initPhaserBridge = function() {
+    if (typeof Phaser !== 'undefined' && !Graphics.phaser) {
+        // Create the headless Phaser instance
+        Graphics.phaser = new Phaser.Game(
+            Graphics.width, 
+            Graphics.height, 
+            Phaser.AUTO, 
+            '', 
+            null
+        );
+        
+        console.log("Phaser Bridge Initialized:", Graphics.phaser);
+        
+        // TODO: Start physics system globally here if you want it always ready
+        // Graphics.phaser.physics.startSystem(Phaser.Physics.ARCADE);
+    }
 };
 
 Scene_Boot.prototype.startNormalGame = function () {

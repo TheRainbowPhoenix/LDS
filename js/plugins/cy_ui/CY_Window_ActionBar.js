@@ -47,9 +47,9 @@ CY_Window_ActionBar.prototype.constructor = CY_Window_ActionBar;
  * Positions at bottom of screen with full width.
  */
 CY_Window_ActionBar.prototype.initialize = function() {
-    var width = Graphics.boxWidth;
+    var width = Graphics.width; // Full screen width
     var height = 48;
-    var y = Graphics.boxHeight - height;
+    var y = Graphics.height - height;
     this._actions = [];
     this._lastInputType = null;
     CY_Window_Base.prototype.initialize.call(this, 0, y, width, height);

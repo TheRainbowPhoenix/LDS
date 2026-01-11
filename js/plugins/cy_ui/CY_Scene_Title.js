@@ -87,12 +87,16 @@ CY_Scene_Title.prototype.start = function() {
 
 /**
  * Update the scene each frame.
- * Opens command window when not busy.
+ * Opens command window when not busy and updates CRT effects.
  */
 CY_Scene_Title.prototype.update = function() {
     if (!this.isBusy()) {
         this._commandWindow.open();
     }
+    
+    // Update CRT shader animation
+    this.updateCRTFilter();
+    
     Scene_Base.prototype.update.call(this);
 };
 
@@ -144,19 +148,24 @@ CY_Scene_Title.prototype.centerSprite = function(sprite) {
 };
 
 //-----------------------------------------------------------------------------
-// Side Stripe Creation
+// Side Stripe Creation with CRT Shader Effects
 //-----------------------------------------------------------------------------
 
 /**
- * Create the vertical dark red stripe on the left side.
- * This is a decorative element that spans the full height of the screen.
- * Features: scanlines, left/right borders, inner box shadow effect.
+ * Create the vertical dark red stripe on the left side with CRT effects.
+ * Features: scanlines, borders, inner shadow, and CRT glitch shader.
  */
 CY_Scene_Title.prototype.createSideStripe = function() {
     var stripeWidth = 320;
     var stripeX = 60;
     var stripeHeight = Graphics.height;
     
+    // Create container for the stripe and effects
+    this._sideStripeContainer = new PIXI.Container();
+    this._sideStripeContainer.x = stripeX;
+    this._sideStripeContainer.y = 0;
+    
+    // Create base stripe sprite
     this._sideStripeSprite = new Sprite();
     this._sideStripeSprite.bitmap = new Bitmap(stripeWidth, stripeHeight);
     
@@ -166,7 +175,7 @@ CY_Scene_Title.prototype.createSideStripe = function() {
     // Base fill with semi-transparent dark red
     bmp.fillRect(0, 0, stripeWidth, stripeHeight, 'rgba(132, 38, 36, 0.37)');
     
-    // Draw inner box shadow effect (darker at edges, lighter in center)
+    // Draw inner box shadow effect (left and right only)
     this.drawInnerBoxShadow(ctx, stripeWidth, stripeHeight);
     
     // Draw scanlines effect
@@ -174,16 +183,110 @@ CY_Scene_Title.prototype.createSideStripe = function() {
     
     // Draw left and right borders
     var borderWidth = 2;
-    var borderColor = 'rgba(255, 97, 88, 0.6)'; // #FF6158 with opacity
+    var borderColor = 'rgba(255, 97, 88, 0.6)';
     bmp.fillRect(0, 0, borderWidth, stripeHeight, borderColor);
     bmp.fillRect(stripeWidth - borderWidth, 0, borderWidth, stripeHeight, borderColor);
     
     bmp._baseTexture.update();
     
-    this._sideStripeSprite.x = stripeX;
-    this._sideStripeSprite.y = 0;
+    this._sideStripeContainer.addChild(this._sideStripeSprite);
     
-    this.addChild(this._sideStripeSprite);
+    // Apply CRT glitch filter if PIXI filters are available
+    this.applyCRTFilter();
+    
+    this.addChild(this._sideStripeContainer);
+};
+
+/**
+ * Apply CRT-like glitch filter to the side stripe.
+ */
+CY_Scene_Title.prototype.applyCRTFilter = function() {
+    // Create custom CRT filter using PIXI
+    if (!PIXI.Filter) return;
+    
+    var crtVertexShader = null; // Use default vertex shader
+    
+    var crtFragmentShader = `
+        precision mediump float;
+        
+        varying vec2 vTextureCoord;
+        uniform sampler2D uSampler;
+        uniform float uTime;
+        uniform float uNoiseIntensity;
+        uniform float uScanlineIntensity;
+        uniform float uGlitchIntensity;
+        
+        // Pseudo-random function
+        float rand(vec2 co) {
+            return fract(sin(dot(co.xy, vec2(12.9898, 78.233))) * 43758.5453);
+        }
+        
+        void main(void) {
+            vec2 uv = vTextureCoord;
+            
+            // Glitch offset (horizontal displacement)
+            float glitchLine = step(0.99, rand(vec2(uTime * 0.1, floor(uv.y * 50.0))));
+            float glitchOffset = glitchLine * (rand(vec2(uTime, uv.y)) - 0.5) * uGlitchIntensity;
+            uv.x += glitchOffset;
+            
+            // Sample the texture
+            vec4 color = texture2D(uSampler, uv);
+            
+            // Scanlines
+            float scanline = sin(uv.y * 800.0) * 0.5 + 0.5;
+            scanline = pow(scanline, 1.5) * uScanlineIntensity;
+            color.rgb -= scanline * 0.1;
+            
+            // Noise
+            float noise = rand(uv + uTime) * uNoiseIntensity;
+            color.rgb += noise * 0.05;
+            
+            // Chromatic aberration (subtle RGB split)
+            float aberration = 0.002;
+            color.r = texture2D(uSampler, vec2(uv.x + aberration, uv.y)).r;
+            color.b = texture2D(uSampler, vec2(uv.x - aberration, uv.y)).b;
+            
+            // Vignette on edges
+            float vignette = 1.0 - smoothstep(0.3, 0.7, abs(uv.x - 0.5) * 2.0);
+            color.rgb *= 0.8 + vignette * 0.2;
+            
+            gl_FragColor = color;
+        }
+    `;
+    
+    try {
+        this._crtFilter = new PIXI.Filter(crtVertexShader, crtFragmentShader, {
+            uTime: 0.0,
+            uNoiseIntensity: 0.3,
+            uScanlineIntensity: 0.4,
+            uGlitchIntensity: 0.02
+        });
+        
+        this._sideStripeContainer.filters = [this._crtFilter];
+        this._crtTime = 0;
+    } catch (e) {
+        console.warn('CRT filter not supported:', e);
+    }
+};
+
+/**
+ * Update CRT shader time uniform for animation.
+ */
+CY_Scene_Title.prototype.updateCRTFilter = function() {
+    if (this._crtFilter && this._crtFilter.uniforms) {
+        this._crtTime += 0.016; // ~60fps
+        this._crtFilter.uniforms.uTime = this._crtTime;
+        
+        // Random glitch spikes
+        if (Math.random() < 0.02) {
+            this._crtFilter.uniforms.uGlitchIntensity = 0.05 + Math.random() * 0.1;
+        } else {
+            this._crtFilter.uniforms.uGlitchIntensity *= 0.95; // Decay
+            if (this._crtFilter.uniforms.uGlitchIntensity < 0.02) {
+                this._crtFilter.uniforms.uGlitchIntensity = 0.02;
+            }
+        }
+    }
 };
 
 /**

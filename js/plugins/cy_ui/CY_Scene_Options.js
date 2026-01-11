@@ -7,20 +7,20 @@
  * @author Cyberpunk UI Mod
  *
  * @help
- * CY_Scene_Options - Tabbed options scene with Cyberpunk styling.
+ * CY_Scene_Options - Full-screen tabbed options scene with Cyberpunk styling.
  * Extends Scene_MenuBase with:
- * - Horizontal tab bar (Sound, Controls, Gameplay)
- * - Scrollable options list with various control types
- * - Bottom action bar with context-sensitive controls
+ * - Full screen gradient background (dark red to black)
+ * - Horizontal tab bar (Sound, Controls, Gameplay) - full width
+ * - Centered options list with max dialog width
+ * - Bottom action bar - full width
  * - Global L1/R1 tab switching from any active window
  * - Settings persistence via ConfigManager
- *
  */
 
 //-----------------------------------------------------------------------------
 // CY_Scene_Options
 //
-// The tabbed options scene with Cyberpunk styling.
+// The full-screen tabbed options scene with Cyberpunk styling.
 //-----------------------------------------------------------------------------
 
 function CY_Scene_Options() {
@@ -30,27 +30,32 @@ function CY_Scene_Options() {
 CY_Scene_Options.prototype = Object.create(Scene_MenuBase.prototype);
 CY_Scene_Options.prototype.constructor = CY_Scene_Options;
 
+//-----------------------------------------------------------------------------
+// Constants
+//-----------------------------------------------------------------------------
+
+CY_Scene_Options.MAX_OPTIONS_WIDTH = 816; // Max width for options content
+CY_Scene_Options.TAB_BAR_HEIGHT = 48;
+CY_Scene_Options.ACTION_BAR_HEIGHT = 48;
 
 //-----------------------------------------------------------------------------
 // Initialization
 //-----------------------------------------------------------------------------
 
-/**
- * Initialize the options scene.
- */
 CY_Scene_Options.prototype.initialize = function() {
     Scene_MenuBase.prototype.initialize.call(this);
 };
 
 //-----------------------------------------------------------------------------
-// Scene Lifecycle (Matches Standard Scene_Options Flow)
+// Scene Lifecycle
 //-----------------------------------------------------------------------------
 
 CY_Scene_Options.prototype.create = function() {
     Scene_MenuBase.prototype.create.call(this);
-    this.createTabBar();        // Custom: Tabs logic
-    this.createOptionsWindow(); // Standard: Main options window
-    this.createActionBar();     // Custom: Bottom Legend
+    this.createGradientBackground();
+    this.createTabBar();
+    this.createOptionsWindow();
+    this.createActionBar();
 };
 
 CY_Scene_Options.prototype.terminate = function() {
@@ -58,10 +63,6 @@ CY_Scene_Options.prototype.terminate = function() {
     ConfigManager.save();
 };
 
-/**
- * Start the scene.
- * Activates the tab bar by default (user selects category first).
- */
 CY_Scene_Options.prototype.start = function() {
     Scene_MenuBase.prototype.start.call(this);
     this._tabBar.activate();
@@ -70,51 +71,119 @@ CY_Scene_Options.prototype.start = function() {
 };
 
 //-----------------------------------------------------------------------------
-// Window Creation
-// Requirement 5.2: Horizontal tab bar with categories (Sound, Controls, Gameplay)
-// Requirement 5.6: Bottom action bar showing available controls
+// Background - Full Screen Gradient
 //-----------------------------------------------------------------------------
 
 /**
- * Create the tab bar window.
- * Displays Sound, Controls, Gameplay tabs at the top.
- * Acts as category selector similar to YEP_OptionsCore.
+ * Override createBackground to use custom gradient.
+ */
+CY_Scene_Options.prototype.createBackground = function() {
+    // Don't call parent - we create our own background
+    this._backgroundSprite = new Sprite();
+    this._backgroundSprite.bitmap = new Bitmap(Graphics.width, Graphics.height);
+    this.addChild(this._backgroundSprite);
+};
+
+/**
+ * Create the gradient background.
+ * Top: #39141B, Center: #06060E, Bottom: #08090E
+ */
+CY_Scene_Options.prototype.createGradientBackground = function() {
+    if (!this._backgroundSprite) return;
+    
+    var bmp = this._backgroundSprite.bitmap;
+    var ctx = bmp._context;
+    var w = Graphics.width;
+    var h = Graphics.height;
+    
+    // Create vertical gradient
+    var gradient = ctx.createLinearGradient(0, 0, 0, h);
+    gradient.addColorStop(0, '#39141B');    // Top - dark red
+    gradient.addColorStop(0.5, '#06060E');  // Center - very dark
+    gradient.addColorStop(1, '#08090E');    // Bottom - near black
+    
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, w, h);
+    
+    bmp._baseTexture.update();
+};
+
+
+//-----------------------------------------------------------------------------
+// Window Creation - Full Width Tab Bar and Action Bar, Centered Options
+//-----------------------------------------------------------------------------
+
+/**
+ * Calculate the offset needed to go from boxWidth/boxHeight to full screen.
+ */
+CY_Scene_Options.prototype.getScreenOffsets = function() {
+    return {
+        x: -Math.floor((Graphics.width - Graphics.boxWidth) / 2),
+        y: -Math.floor((Graphics.height - Graphics.boxHeight) / 2),
+        fullWidth: Graphics.width,
+        fullHeight: Graphics.height
+    };
+};
+
+/**
+ * Create the tab bar window - full width at top.
  */
 CY_Scene_Options.prototype.createTabBar = function() {
+    var offsets = this.getScreenOffsets();
+    var width = offsets.fullWidth;
+    var height = CY_Scene_Options.TAB_BAR_HEIGHT;
+    
     this._tabBar = new CY_Window_TabBar(['SOUND', 'CONTROLS', 'GAMEPLAY']);
+    this._tabBar.move(offsets.x, offsets.y, width, height);
     this._tabBar.setHandler('ok', this.onTabOk.bind(this));
     this._tabBar.setHandler('cancel', this.popScene.bind(this));
+    this._tabBar.opacity = 0; // Transparent window chrome
+    // Hide the custom CY background sprite so gradient shows through
+    if (this._tabBar._cyBackSprite) {
+        this._tabBar._cyBackSprite.visible = false;
+    }
     this.addWindow(this._tabBar);
 };
 
 /**
- * Create the options window.
- * Renamed from createOptionsList to match standard Scene_Options flow.
+ * Create the options window - centered with max width, transparent background.
  */
 CY_Scene_Options.prototype.createOptionsWindow = function() {
-    // Calculate layout based on tab bar height
-    var y = this._tabBar.height;
-    var height = Graphics.boxHeight - y - 48; // Leave room for action bar
+    var offsets = this.getScreenOffsets();
+    var maxWidth = CY_Scene_Options.MAX_OPTIONS_WIDTH;
+    var width = Math.min(maxWidth, Graphics.boxWidth - 40);
+    var x = Math.floor((Graphics.boxWidth - width) / 2); // Centered within boxWidth
+    var y = CY_Scene_Options.TAB_BAR_HEIGHT + offsets.y;
+    var height = offsets.fullHeight - CY_Scene_Options.TAB_BAR_HEIGHT - CY_Scene_Options.ACTION_BAR_HEIGHT;
 
-    // Instantiate the custom list window
-    this._optionsWindow = new CY_Window_OptionsList(0, y, Graphics.boxWidth, height);
-    
-    // Set Handlers - cancel goes back to tab bar
+    this._optionsWindow = new CY_Window_OptionsList(x, y, width, height);
     this._optionsWindow.setHandler('cancel', this.onOptionsCancel.bind(this));
-    
+    this._optionsWindow.opacity = 0; // Transparent window chrome
+    // Hide the custom CY background sprite so gradient shows through
+    if (this._optionsWindow._cyBackSprite) {
+        this._optionsWindow._cyBackSprite.visible = false;
+    }
     this.addWindow(this._optionsWindow);
     
-    // Initial Load
     this.loadTabOptions(0);
 };
 
 /**
- * Create the action bar window.
- * Displays available controls at the bottom of the screen.
- * Updates based on current context.
+ * Create the action bar window - full width at bottom.
  */
 CY_Scene_Options.prototype.createActionBar = function() {
+    var offsets = this.getScreenOffsets();
+    var width = offsets.fullWidth;
+    var height = CY_Scene_Options.ACTION_BAR_HEIGHT;
+    var y = offsets.fullHeight - height + offsets.y;
+    
     this._actionBar = new CY_Window_ActionBar();
+    this._actionBar.move(offsets.x, y, width, height);
+    this._actionBar.opacity = 0; // Transparent window chrome
+    // Hide the custom CY background sprite so gradient shows through
+    if (this._actionBar._cyBackSprite) {
+        this._actionBar._cyBackSprite.visible = false;
+    }
     this.updateActionBar();
     this.addWindow(this._actionBar);
 };
@@ -128,7 +197,6 @@ CY_Scene_Options.prototype.updateActionBar = function() {
     var actions = [];
     
     if (this._tabBar && this._tabBar.active) {
-        // Tab bar is active
         actions = [
             { button: 'B', label: 'Back' },
             { button: 'L1', label: 'Prev Tab' },
@@ -136,7 +204,6 @@ CY_Scene_Options.prototype.updateActionBar = function() {
             { button: 'A', label: 'Select' }
         ];
     } else if (this._optionsWindow && this._optionsWindow.active) {
-        // Options list is active
         actions = [
             { button: 'B', label: 'Back' },
             { button: 'L1', label: 'Prev Tab' },
@@ -144,7 +211,6 @@ CY_Scene_Options.prototype.updateActionBar = function() {
             { button: 'A', label: 'Adjust' }
         ];
     } else {
-        // Default
         actions = [
             { button: 'B', label: 'Close' },
             { button: 'A', label: 'Select' }
@@ -158,11 +224,6 @@ CY_Scene_Options.prototype.updateActionBar = function() {
 // Data Logic
 //-----------------------------------------------------------------------------
 
-/**
- * Load options for a specific tab.
- * Each tab has its own set of options with headers for grouping.
- * @param {number} tabIndex - Index of the tab (0=Sound, 1=Controls, 2=Gameplay)
- */
 CY_Scene_Options.prototype.loadTabOptions = function(tabIndex) {
     var options = [];
     
@@ -170,7 +231,6 @@ CY_Scene_Options.prototype.loadTabOptions = function(tabIndex) {
         case 0: // SOUND
             options = [
                 { type: 'header', label: 'Volume' },
-                // Added step: 20 to match your standard Window_Options volumeOffset
                 { type: 'slider', label: 'Master Volume', symbol: 'bgmVolume', step: 20 },
                 { type: 'slider', label: 'SFX Volume', symbol: 'seVolume', step: 20 },
                 { type: 'slider', label: 'Music Volume', symbol: 'meVolume', step: 20 },
@@ -205,10 +265,6 @@ CY_Scene_Options.prototype.loadTabOptions = function(tabIndex) {
 // Handler Methods
 //-----------------------------------------------------------------------------
 
-/**
- * Handle tab selection (OK pressed on tab bar).
- * Activates the options window for the selected tab.
- */
 CY_Scene_Options.prototype.onTabOk = function() {
     this.loadTabOptions(this._tabBar.index());
     this._optionsWindow.activate();
@@ -216,42 +272,28 @@ CY_Scene_Options.prototype.onTabOk = function() {
     this.updateActionBar();
 };
 
-/**
- * Handle cancel from options list.
- * Returns focus to the tab bar.
- */
 CY_Scene_Options.prototype.onOptionsCancel = function() {
     this._optionsWindow.deselect();
     this._tabBar.activate();
     this.updateActionBar();
 };
 
-
 //-----------------------------------------------------------------------------
 // Input & Update
 //-----------------------------------------------------------------------------
 
-/**
- * Update the scene.
- * Handles global L1/R1 tab switching from any active window.
- */
 CY_Scene_Options.prototype.update = function() {
     Scene_MenuBase.prototype.update.call(this);
     
-    // Global tab switching logic - works from any window
     if (Input.isTriggered('pageup')) {
         this.switchTab(-1);
     } else if (Input.isTriggered('pagedown')) {
         this.switchTab(1);
     }
     
-    // Update action bar when window focus changes
     this.updateActionBarOnFocusChange();
 };
 
-/**
- * Track focus changes and update action bar accordingly.
- */
 CY_Scene_Options.prototype.updateActionBarOnFocusChange = function() {
     var currentFocus = this._tabBar.active ? 'tabBar' : 
                        this._optionsWindow.active ? 'options' : 'none';
@@ -262,11 +304,6 @@ CY_Scene_Options.prototype.updateActionBarOnFocusChange = function() {
     }
 };
 
-/**
- * Switch to a different tab.
- * Wraps around at the ends (last tab -> first tab, first tab -> last tab).
- * @param {number} direction - Direction to switch (-1 for previous, 1 for next)
- */
 CY_Scene_Options.prototype.switchTab = function(direction) {
     var tabCount = 3;
     var currentIndex = this._tabBar.index();
@@ -275,24 +312,9 @@ CY_Scene_Options.prototype.switchTab = function(direction) {
     this._tabBar.select(newIndex);
     this.loadTabOptions(newIndex);
     
-    // If options window was active, keep it active with new content
     if (this._optionsWindow.active) {
         this._optionsWindow.select(0);
     }
     
     SoundManager.playCursor();
 };
-
-//-----------------------------------------------------------------------------
-// Background
-//-----------------------------------------------------------------------------
-
-/**
- * Create the scene background.
- * Uses a semi-transparent black overlay for the Cyberpunk aesthetic.
- */
-CY_Scene_Options.prototype.createBackground = function() {
-    Scene_MenuBase.prototype.createBackground.call(this);
-    // The default Scene_MenuBase background works well with our styling
-};
-

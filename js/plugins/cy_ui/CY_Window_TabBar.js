@@ -47,7 +47,7 @@ CY_Window_TabBar.prototype.constructor = CY_Window_TabBar;
  */
 CY_Window_TabBar.prototype.initialize = function(tabs) {
     this._tabs = tabs || ['SOUND', 'CONTROLS', 'GAMEPLAY'];
-    var width = Graphics.boxWidth;
+    var width = Graphics.width; // Full screen width
     var height = this.fittingHeight(1);
     CY_Window_Selectable.prototype.initialize.call(this, 0, 0, width, height);
     this.refresh();

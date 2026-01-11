@@ -76,13 +76,13 @@ Scene_PhaserTest.prototype.runPhaserLogic = function() {
             // Add a button to go back to the menu
             var button = game.add.text(game.world.centerX, game.world.centerY, "Back to Menu", { font: "24px Arial", fill: "#fff", backgroundColor: "#333", padding: 10 });
             button.anchor.set(0.5);
-            button.inputEnabled = true;
-            button.events.onInputDown.add(function() {
+            // button.inputEnabled = true;
+            /* button.events.onInputDown.add(function() {
                 SceneManager.pop();
-            });
+            }); */
 
             // Add a timer to go back to the menu after 30 seconds
-            game.time.events.add(Phaser.Timer.SECOND * 30, function() {
+            game.time.events.add(Phaser.Timer.SECOND * 90, function() {
                 SceneManager.pop();
             });
         },

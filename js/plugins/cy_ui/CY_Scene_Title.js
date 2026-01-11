@@ -417,7 +417,12 @@ CY_Scene_Title.prototype.commandNewGame = function() {
  */
 CY_Scene_Title.prototype.commandContinue = function() {
     this._commandWindow.close();
-    SceneManager.push(Scene_Load);
+    // Use CY_Scene_Load if available
+    if (typeof CY_Scene_Load !== 'undefined') {
+        SceneManager.push(CY_Scene_Load);
+    } else {
+        SceneManager.push(Scene_Load);
+    }
 };
 
 /**
@@ -426,7 +431,12 @@ CY_Scene_Title.prototype.commandContinue = function() {
  */
 CY_Scene_Title.prototype.commandLoadGame = function() {
     this._commandWindow.close();
-    SceneManager.push(Scene_Load);
+    // Use CY_Scene_Load if available
+    if (typeof CY_Scene_Load !== 'undefined') {
+        SceneManager.push(CY_Scene_Load);
+    } else {
+        SceneManager.push(Scene_Load);
+    }
 };
 
 /**

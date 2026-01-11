@@ -196,3 +196,44 @@ CY_System.drawCornerHints = function(bitmap, x, y, w, h, color, cornerSize, line
     ctx.restore();
     bitmap._baseTexture.update();
 };
+
+
+//-----------------------------------------------------------------------------
+// ConfigManager Extensions for CY Settings
+//-----------------------------------------------------------------------------
+
+/**
+ * Extend ConfigManager to include CRT shader setting.
+ * Default value is true (CRT shader enabled).
+ */
+(function() {
+    // Store original makeData
+    var _ConfigManager_makeData = ConfigManager.makeData;
+    ConfigManager.makeData = function() {
+        var config = _ConfigManager_makeData.call(this);
+        config.crtShader = this.crtShader;
+        return config;
+    };
+    
+    // Store original applyData
+    var _ConfigManager_applyData = ConfigManager.applyData;
+    ConfigManager.applyData = function(config) {
+        _ConfigManager_applyData.call(this, config);
+        // Default to true if not set
+        this.crtShader = this.readFlag(config, 'crtShader', true);
+    };
+    
+    // Helper to read flag with default value
+    ConfigManager.readFlag = ConfigManager.readFlag || function(config, name, defaultValue) {
+        if (name in config) {
+            return !!config[name];
+        } else {
+            return defaultValue;
+        }
+    };
+    
+    // Initialize default value
+    if (ConfigManager.crtShader === undefined) {
+        ConfigManager.crtShader = true;
+    }
+})();

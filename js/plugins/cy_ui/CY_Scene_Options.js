@@ -230,8 +230,11 @@ CY_Scene_Options.prototype.applyCRTFilter = function() {
             uEdgeNoiseWidth: 0.025  // Width of edge noise effect (2.5% of screen)
         });
         
-        // Apply filter to the entire scene
-        this.filters = [this._crtFilter];
+        // Apply filter only if CRT shader is enabled (default to true)
+        var crtEnabled = ConfigManager.crtShader !== false;
+        if (crtEnabled) {
+            this.filters = [this._crtFilter];
+        }
         this._crtTime = 0;
     } catch (e) {
         console.warn('CRT filter not supported:', e);
@@ -240,11 +243,25 @@ CY_Scene_Options.prototype.applyCRTFilter = function() {
 
 /**
  * Update CRT shader time uniform for animation.
+ * Also checks if CRT shader is enabled in settings.
  */
 CY_Scene_Options.prototype.updateCRTFilter = function() {
-    if (this._crtFilter && this._crtFilter.uniforms) {
-        this._crtTime += 0.016;
-        this._crtFilter.uniforms.uTime = this._crtTime;
+    // Check if CRT shader is enabled (default to true if not set)
+    var crtEnabled = ConfigManager.crtShader !== false;
+    
+    if (this._crtFilter) {
+        // Toggle filter visibility based on setting
+        if (crtEnabled && !this.filters) {
+            this.filters = [this._crtFilter];
+        } else if (!crtEnabled && this.filters) {
+            this.filters = null;
+        }
+        
+        // Update animation if enabled
+        if (crtEnabled && this._crtFilter.uniforms) {
+            this._crtTime += 0.016;
+            this._crtFilter.uniforms.uTime = this._crtTime;
+        }
     }
 };
 
@@ -400,6 +417,7 @@ CY_Scene_Options.prototype.loadTabOptions = function(tabIndex) {
         case 2: // GAMEPLAY
             options = [
                 { type: 'header', label: 'Display' },
+                { type: 'toggle', label: 'CRT Shader Effect', symbol: 'crtShader' },
                 { type: 'toggle', label: 'Show Damage Numbers', symbol: 'showDamage' },
                 { type: 'header', label: 'Subtitles' },
                 { type: 'toggle', label: 'Cinematic', symbol: 'subtitlesCinematic' },

@@ -133,25 +133,26 @@ CY_Window_ActionBar.prototype.refresh = function() {
     // Use smaller font for action bar
     this.contents.fontSize = 14;
     
-    // Start from right side with padding
-    var x = this.contentsWidth() - 16;
+    // Start from right side with padding (80px to avoid edge glitch effect)
+    var x = this.contentsWidth() - 80;
+    var btnSize = 22;
+    var baseY = Math.floor((this.contentsHeight() - btnSize) / 2); // Center vertically
     
     // Draw actions from right to left (last action appears rightmost)
     for (var i = this._actions.length - 1; i >= 0; i--) {
         var action = this._actions[i];
         var displayButton = useGamepad ? action.button : this.getKeyboardLabel(action.button);
         var labelWidth = this.textWidth(action.label) + 8;
-        var btnSize = 22;
         
-        // Draw label first (to the right of button)
+        // Draw label aligned with button baseline
         this.changeTextColor(CY_System.Colors.white);
-        this.drawText(action.label, x - labelWidth, 6, labelWidth, 'right');
+        this.drawText(action.label, x - labelWidth, baseY - 9, labelWidth, 'right');
         
         // Move x position for button icon
         x -= labelWidth + 6;
         
         // Draw button icon (circular with letter)
-        this.drawButtonIcon(action.button, displayButton, x - btnSize, 5);
+        this.drawButtonIcon(action.button, displayButton, x - btnSize, baseY);
         
         // Move x position for next action with spacing
         x -= btnSize + 16;
@@ -186,8 +187,9 @@ CY_Window_ActionBar.prototype.drawButtonIcon = function(buttonType, displayText,
     var originalFontSize = this.contents.fontSize;
     this.contents.fontSize = 11;
     this.changeTextColor('#000000'); // Dark text on cyan background
-    // Center text vertically in the circle
-    this.drawText(displayText, x, y + 4, size, 'center');
+    // Center text both horizontally and vertically in the circle
+    // Offset by ~3px to account for font baseline
+    this.drawText(displayText, x, y - 8, size, 'center');
     this.contents.fontSize = originalFontSize;
 };
 

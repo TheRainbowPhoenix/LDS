@@ -65,6 +65,7 @@ Phaser.Graphics = function (game, x, y)
     this.emit = this._baseInstance.emit
     this.worldTransform = this._baseInstance.worldTransform
     this.updateTransform = this._baseInstance.updateTransform
+    this.render = this._renderCanvas // _renderWebGL // _renderCanvas // TODO: if webgl : _renderWebGL
 
     /**
      * @property {number} type - The const type of this object.

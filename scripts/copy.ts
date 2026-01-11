@@ -80,7 +80,7 @@ if (import.meta.main) {
 
     case "plugins": {
       // cpx './plugins/*.js' ./game/js/plugins/
-      const srcDir = "plugins";
+      const srcDir = "dist/plugins";
       const dstDir = join("game", "js", "plugins");
 
       try {

@@ -15,23 +15,6 @@
  * - Global L1/R1 tab switching from any active window
  * - Settings persistence via ConfigManager
  *
- * This plugin requires the following plugins to be loaded first:
- * - CY_System.js
- * - CY_Window_Base.js
- * - CY_Window_Selectable.js
- * - CY_Window_TabBar.js
- * - CY_Window_OptionsList.js
- * - CY_Window_ActionBar.js
- *
- * Requirements fulfilled:
- * - 5.1: Extend Scene_MenuBase
- * - 5.2: Horizontal tab bar with categories (Sound, Controls, Gameplay)
- * - 5.3: L1/LB or Q navigates to previous tab
- * - 5.4: R1/RB or E navigates to next tab
- * - 5.6: Bottom action bar showing available controls
- * - 6.8: Options grouped under section headers
- * - 8.5: Page navigation with shoulder buttons from any window
- * - 9.1: Save settings on exit via ConfigManager
  */
 
 //-----------------------------------------------------------------------------
@@ -59,17 +42,20 @@ CY_Scene_Options.prototype.initialize = function() {
     Scene_MenuBase.prototype.initialize.call(this);
 };
 
-/**
- * Create all scene elements.
- * Requirement 5.1: Extend Scene_MenuBase
- * Requirement 5.2: Horizontal tab bar with categories
- * Requirement 5.6: Bottom action bar
- */
+//-----------------------------------------------------------------------------
+// Scene Lifecycle (Matches Standard Scene_Options Flow)
+//-----------------------------------------------------------------------------
+
 CY_Scene_Options.prototype.create = function() {
     Scene_MenuBase.prototype.create.call(this);
-    this.createTabBar();
-    this.createOptionsList();
-    this.createActionBar();
+    this.createTabBar();        // Custom: Tabs logic
+    this.createOptionsWindow(); // Standard: Main options window
+    this.createActionBar();     // Custom: Bottom Legend
+};
+
+CY_Scene_Options.prototype.terminate = function() {
+    Scene_MenuBase.prototype.terminate.call(this);
+    ConfigManager.save();
 };
 
 /**
@@ -78,7 +64,7 @@ CY_Scene_Options.prototype.create = function() {
  */
 CY_Scene_Options.prototype.start = function() {
     Scene_MenuBase.prototype.start.call(this);
-    this._optionsList.activate();
+    this._optionsWindow.activate();
 };
 
 //-----------------------------------------------------------------------------
@@ -86,6 +72,28 @@ CY_Scene_Options.prototype.start = function() {
 // Requirement 5.2: Horizontal tab bar with categories (Sound, Controls, Gameplay)
 // Requirement 5.6: Bottom action bar showing available controls
 //-----------------------------------------------------------------------------
+
+/**
+ * Create the options window.
+ * Renamed from createOptionsList to match standard Scene_Options flow.
+ */
+CY_Scene_Options.prototype.createOptionsWindow = function() {
+    // Calculate layout based on tab bar height
+    var y = this._tabBar.height;
+    var height = Graphics.boxHeight - y - 48; // Leave room for action bar
+
+    // Instantiate the custom list window
+    this._optionsWindow = new CY_Window_OptionsList(0, y, Graphics.boxWidth, height);
+    
+    // Set Handlers
+    // Note: Standard calls popScene, but we redirect to TabBar first for UI flow
+    this._optionsWindow.setHandler('cancel', this.onOptionsCancel.bind(this));
+    
+    this.addWindow(this._optionsWindow);
+    
+    // Initial Load
+    this.loadTabOptions(0);
+};
 
 /**
  * Create the tab bar window.
@@ -102,15 +110,15 @@ CY_Scene_Options.prototype.createTabBar = function() {
  * Create the options list window.
  * Displays options for the currently selected tab.
  */
-CY_Scene_Options.prototype.createOptionsList = function() {
-    var y = this._tabBar.height;
-    var height = Graphics.boxHeight - y - 48; // Leave room for action bar
-    this._optionsList = new CY_Window_OptionsList(0, y, Graphics.boxWidth, height);
-    this._optionsList.setHandler('cancel', this.onOptionsCancel.bind(this));
-    this.addWindow(this._optionsList);
-    // Load initial tab options (Sound tab)
-    this.loadTabOptions(0);
-};
+// CY_Scene_Options.prototype.createOptionsList = function() {
+//     var y = this._tabBar.height;
+//     var height = Graphics.boxHeight - y - 48; // Leave room for action bar
+//     this._optionsList = new CY_Window_OptionsList(0, y, Graphics.boxWidth, height);
+//     this._optionsList.setHandler('cancel', this.onOptionsCancel.bind(this));
+//     this.addWindow(this._optionsList);
+//     // Load initial tab options (Sound tab)
+//     this.loadTabOptions(0);
+// };
 
 /**
  * Create the action bar window.
@@ -126,11 +134,8 @@ CY_Scene_Options.prototype.createActionBar = function() {
     this.addWindow(this._actionBar);
 };
 
-
 //-----------------------------------------------------------------------------
-// Tab Content Loading
-// Requirement 5.2: Tab bar with categories
-// Requirement 6.8: Options grouped under section headers
+// Data Logic
 //-----------------------------------------------------------------------------
 
 /**
@@ -145,9 +150,10 @@ CY_Scene_Options.prototype.loadTabOptions = function(tabIndex) {
         case 0: // SOUND
             options = [
                 { type: 'header', label: 'Volume' },
-                { type: 'slider', label: 'Master Volume', symbol: 'bgmVolume' },
-                { type: 'slider', label: 'SFX Volume', symbol: 'seVolume' },
-                { type: 'slider', label: 'Music Volume', symbol: 'meVolume' },
+                // Added step: 20 to match your standard Window_Options volumeOffset
+                { type: 'slider', label: 'Master Volume', symbol: 'bgmVolume', step: 20 },
+                { type: 'slider', label: 'SFX Volume', symbol: 'seVolume', step: 20 },
+                { type: 'slider', label: 'Music Volume', symbol: 'meVolume', step: 20 },
                 { type: 'header', label: 'Misc' },
                 { type: 'toggle', label: 'Mute Detection Sounds', symbol: 'muteDetection' }
             ];
@@ -172,7 +178,7 @@ CY_Scene_Options.prototype.loadTabOptions = function(tabIndex) {
             break;
     }
     
-    this._optionsList.setOptions(options);
+    this._optionsWindow.setOptions(options);
 };
 
 //-----------------------------------------------------------------------------
@@ -194,15 +200,12 @@ CY_Scene_Options.prototype.onTabOk = function() {
  */
 CY_Scene_Options.prototype.onOptionsCancel = function() {
     this._tabBar.activate();
-    this._optionsList.deactivate();
+    this._optionsWindow.deactivate();
 };
 
 
 //-----------------------------------------------------------------------------
-// Global Tab Switching
-// Requirement 5.3: L1/LB or Q navigates to previous tab
-// Requirement 5.4: R1/RB or E navigates to next tab
-// Requirement 8.5: Page navigation with shoulder buttons from any window
+// Input & Update
 //-----------------------------------------------------------------------------
 
 /**
@@ -212,8 +215,7 @@ CY_Scene_Options.prototype.onOptionsCancel = function() {
 CY_Scene_Options.prototype.update = function() {
     Scene_MenuBase.prototype.update.call(this);
     
-    // Handle L1/R1 for tab switching from anywhere in the scene
-    // This allows tab switching even when options list is active
+    // Global tab switching logic
     if (Input.isTriggered('pageup')) {
         this.switchTab(-1);
     } else if (Input.isTriggered('pagedown')) {
@@ -227,7 +229,7 @@ CY_Scene_Options.prototype.update = function() {
  * @param {number} direction - Direction to switch (-1 for previous, 1 for next)
  */
 CY_Scene_Options.prototype.switchTab = function(direction) {
-    var tabCount = 3; // Sound, Controls, Gameplay
+    var tabCount = 3;
     var currentIndex = this._tabBar.index();
     var newIndex = (currentIndex + direction + tabCount) % tabCount;
     
@@ -237,21 +239,7 @@ CY_Scene_Options.prototype.switchTab = function(direction) {
 };
 
 //-----------------------------------------------------------------------------
-// Settings Persistence
-// Requirement 9.1: Save settings on exit via ConfigManager
-//-----------------------------------------------------------------------------
-
-/**
- * Terminate the scene.
- * Saves all settings to ConfigManager before exiting.
- */
-CY_Scene_Options.prototype.terminate = function() {
-    Scene_MenuBase.prototype.terminate.call(this);
-    ConfigManager.save();
-};
-
-//-----------------------------------------------------------------------------
-// Background Override
+// Background
 //-----------------------------------------------------------------------------
 
 /**

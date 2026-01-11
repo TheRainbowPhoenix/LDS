@@ -169,16 +169,16 @@ CY_Window_TitleCommand.prototype.callOkHandler = Window_Command.prototype.callOk
  * Requirement 4.2: Creates command list with all required commands
  */
 CY_Window_TitleCommand.prototype.initialize = function() {
-    // Calculate dimensions
-    var width = this.windowWidth();
-    var height = this.windowHeight();
-
-    // Initialize parent with calculated dimensions
-    CY_Window_Selectable.prototype.initialize.call(this, 0, 0, width, height);
-    
     // Build command list first (needed for sizing)
     this.clearCommandList();
     this.makeCommandList();
+    
+    // Calculate dimensions
+    var width = this.windowWidth();
+    var height = this.windowHeight();
+    
+    // Initialize parent with calculated dimensions
+    CY_Window_Selectable.prototype.initialize.call(this, 0, 0, width, height);
     
     // Refresh contents and select first item
     this.refresh();

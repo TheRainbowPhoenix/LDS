@@ -43,6 +43,23 @@ CY_Window_OptionsList.prototype = Object.create(CY_Window_Selectable.prototype);
 CY_Window_OptionsList.prototype.constructor = CY_Window_OptionsList;
 
 //-----------------------------------------------------------------------------
+// Initialization
+//-----------------------------------------------------------------------------
+
+/**
+ * Initialize the options list window.
+ * @param {number} x - X position of the window
+ * @param {number} y - Y position of the window
+ * @param {number} width - Width of the window
+ * @param {number} height - Height of the window
+ */
+CY_Window_OptionsList.prototype.initialize = function(x, y, width, height) {
+    this._options = [];
+    CY_Window_Selectable.prototype.initialize.call(this, x, y, width, height);
+};
+
+
+//-----------------------------------------------------------------------------
 // Option Type Constants
 //-----------------------------------------------------------------------------
 
@@ -75,22 +92,6 @@ CY_Window_OptionsList.TYPE_BUTTON = 'button';
  * Requirement 6.8
  */
 CY_Window_OptionsList.TYPE_HEADER = 'header';
-
-//-----------------------------------------------------------------------------
-// Initialization
-//-----------------------------------------------------------------------------
-
-/**
- * Initialize the options list window.
- * @param {number} x - X position of the window
- * @param {number} y - Y position of the window
- * @param {number} width - Width of the window
- * @param {number} height - Height of the window
- */
-CY_Window_OptionsList.prototype.initialize = function(x, y, width, height) {
-    this._options = [];
-    CY_Window_Selectable.prototype.initialize.call(this, x, y, width, height);
-};
 
 //-----------------------------------------------------------------------------
 // Option Management

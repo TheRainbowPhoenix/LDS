@@ -172,9 +172,9 @@ CY_Window_Selectable.prototype.updateHighlight = function() {
 
 /**
  * Refresh the highlight sprite graphics.
- * Draws a semi-transparent cyan background with cut corner and left border accent.
+ * Draws a semi-transparent cyan background with cut corner and border on all sides.
  * Requirement 4.3: Cyan highlight for selected items
- * Requirement 4.4: Left border accent
+ * Requirement 4.4: Border on all sides including cut corner
  * @param {number} w - Width of the highlight
  * @param {number} h - Height of the highlight
  */
@@ -189,7 +189,6 @@ CY_Window_Selectable.prototype.refreshHighlight = function(w, h) {
     bmp.clear();
     
     // Draw semi-transparent cyan background with cut corner
-    // Using smaller cut size (8px) for highlight to be more subtle
     var highlightCutSize = 8;
     CY_System.drawCutCornerRect(
         bmp, 
@@ -201,9 +200,18 @@ CY_Window_Selectable.prototype.refreshHighlight = function(w, h) {
         highlightCutSize
     );
     
-    // Draw cyan left border accent (3px wide, full height)
-    var borderWidth = 3;
-    bmp.fillRect(0, 0, borderWidth, h, CY_System.Colors.cyan);
+    // Draw cyan border on all sides including cut corner
+    var borderWidth = 2;
+    CY_System.drawCutCornerBorder(
+        bmp,
+        0,
+        0,
+        w,
+        h,
+        CY_System.Colors.cyan,
+        borderWidth,
+        highlightCutSize
+    );
 };
 
 //-----------------------------------------------------------------------------

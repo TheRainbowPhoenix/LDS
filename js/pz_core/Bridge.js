@@ -10,9 +10,37 @@ Phaser.GAMES = [];
 // ---------------------------------------------------------------------------
 // 1. Phaser.Game Adaptation
 // ---------------------------------------------------------------------------
-// We strip the DOM/Canvas creation. This Game object acts purely as a 
-// Logic/State/Physics manager attached to the RPG Maker Graphics.
-// ---------------------------------------------------------------------------
+
+if (!PIXI.blendModes) {
+    PIXI.blendModes = {"NORMAL":0,"ADD":1,"MULTIPLY":2,"SCREEN":3,"OVERLAY":4,"DARKEN":5,"LIGHTEN":6,"COLOR_DODGE":7,"COLOR_BURN":8,"HARD_LIGHT":9,"SOFT_LIGHT":10,"DIFFERENCE":11,"EXCLUSION":12,"HUE":13,"SATURATION":14,"COLOR":15,"LUMINOSITY":16}
+}
+
+if (!PIXI.blendModesCanvas)
+{
+    var b = [];
+    var modes = PIXI.blendModes;
+    var useNew = true;
+
+    b[modes.NORMAL] = 'source-over';
+    b[modes.ADD] = 'lighter';
+    b[modes.MULTIPLY] = (useNew) ? 'multiply' : 'source-over';
+    b[modes.SCREEN] = (useNew) ? 'screen' : 'source-over';
+    b[modes.OVERLAY] = (useNew) ? 'overlay' : 'source-over';
+    b[modes.DARKEN] = (useNew) ? 'darken' : 'source-over';
+    b[modes.LIGHTEN] = (useNew) ? 'lighten' : 'source-over';
+    b[modes.COLOR_DODGE] = (useNew) ? 'color-dodge' : 'source-over';
+    b[modes.COLOR_BURN] = (useNew) ? 'color-burn' : 'source-over';
+    b[modes.HARD_LIGHT] = (useNew) ? 'hard-light' : 'source-over';
+    b[modes.SOFT_LIGHT] = (useNew) ? 'soft-light' : 'source-over';
+    b[modes.DIFFERENCE] = (useNew) ? 'difference' : 'source-over';
+    b[modes.EXCLUSION] = (useNew) ? 'exclusion' : 'source-over';
+    b[modes.HUE] = (useNew) ? 'hue' : 'source-over';
+    b[modes.SATURATION] = (useNew) ? 'saturation' : 'source-over';
+    b[modes.COLOR] = (useNew) ? 'color' : 'source-over';
+    b[modes.LUMINOSITY] = (useNew) ? 'luminosity' : 'source-over';
+
+    PIXI.blendModesCanvas = b;
+}
 
 // ---------------------------------------------------------------------------
 // 3. Phaser.Sprite Adaptation (Inherit from PIXI.Sprite v7)

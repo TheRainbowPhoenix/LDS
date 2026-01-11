@@ -7,12 +7,14 @@
 
 const CY_Main = {};
 
+// let parameters = window.parameters || undefined;
+
 CY_Main.Parameters = {
-    enableCyberpunkTitle: parameters['enableCyberpunkTitle'] !== 'false',
-    enableCyberpunkOptions: parameters['enableCyberpunkOptions'] !== 'false',
-    titleLogoX: Number(parameters['titleLogoX'] || 80),
-    titleLogoY: Number(parameters['titleLogoY'] || -150),
-    commandWindowX: Number(parameters['commandWindowX'] || 80)
+    enableCyberpunkTitle: parameters ? parameters['enableCyberpunkTitle'] !== 'false' : true,
+    enableCyberpunkOptions: parameters ? parameters['enableCyberpunkOptions'] !== 'false' : false,
+    titleLogoX: parameters ?  Number(parameters['titleLogoX'] || 80) : 80,
+    titleLogoY: parameters ? Number(parameters['titleLogoY'] || -150) : -150,
+    commandWindowX: parameters ? Number(parameters['commandWindowX'] || 80) : 80
 };
 
 //=========================================================================

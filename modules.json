@@ -4,5 +4,7 @@
   "rpg_objects",
   "rpg_scenes",
   "rpg_sprites",
-  "rpg_windows"
+  "rpg_windows",
+  "pz_core",
+  "action"
 ]

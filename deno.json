@@ -7,11 +7,12 @@
     "build:sprites": "deno run -A scripts/concat.ts rpg_sprites",
     "build:windows": "deno run -A scripts/concat.ts rpg_windows",
     "build:phaser": "deno run -A scripts/concat.ts pz_core",
+    "build:action": "deno run -A scripts/concat.ts action",
 
     "build:mixer": "deno run -A scripts/build_mixer.ts",
     "build:cyui": "deno run -A scripts/build_cyui.ts",
 
-    "build": "deno task build:core && deno task build:managers && deno task build:objects && deno task build:scenes && deno task build:sprites && deno task build:windows && deno task build:mixer && deno task build:phaser && deno task build:cyui",
+    "build": "deno task build:core && deno task build:managers && deno task build:objects && deno task build:scenes && deno task build:sprites && deno task build:windows && deno task build:mixer && deno task build:phaser && deno task build:cyui && deno task build:action",
 
     "copy:corescripts": "deno run -A scripts/copy.ts corescripts",
     "copy:libs": "deno run -A scripts/copy.ts libs",

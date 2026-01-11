@@ -56,6 +56,7 @@ CY_Scene_Options.prototype.create = function() {
     this.createTabBar();
     this.createOptionsWindow();
     this.createActionBar();
+    this.applyCRTFilter();
 };
 
 CY_Scene_Options.prototype.terminate = function() {
@@ -108,6 +109,94 @@ CY_Scene_Options.prototype.createGradientBackground = function() {
     bmp._baseTexture.update();
 };
 
+//-----------------------------------------------------------------------------
+// CRT Lens Distortion Shader with Ghosting
+//-----------------------------------------------------------------------------
+
+/**
+ * Apply CRT lens distortion filter to the entire scene.
+ * Creates barrel distortion (curved edges) and ghost shadow effect.
+ */
+CY_Scene_Options.prototype.applyCRTFilter = function() {
+    if (!PIXI.Filter) return;
+    
+    var crtFragmentShader = `
+        precision mediump float;
+        
+        varying vec2 vTextureCoord;
+        uniform sampler2D uSampler;
+        uniform float uTime;
+        uniform float uDistortion;
+        uniform float uGhostOffset;
+        uniform float uGhostOpacity;
+        
+        // Barrel distortion function
+        vec2 barrelDistortion(vec2 coord, float amt) {
+            vec2 cc = coord - 0.5;
+            float dist = dot(cc, cc);
+            return coord + cc * dist * amt;
+        }
+        
+        void main(void) {
+            // Apply barrel distortion for CRT lens curve effect
+            vec2 uv = barrelDistortion(vTextureCoord, uDistortion);
+            
+            // Check if we're outside the screen after distortion
+            if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
+                gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+                return;
+            }
+            
+            // Sample main color
+            vec4 color = texture2D(uSampler, uv);
+            
+            // Ghost shadow effect - sample slightly offset and darker
+            vec2 ghostUV = barrelDistortion(vTextureCoord + vec2(uGhostOffset, uGhostOffset * 0.5), uDistortion);
+            if (ghostUV.x >= 0.0 && ghostUV.x <= 1.0 && ghostUV.y >= 0.0 && ghostUV.y <= 1.0) {
+                vec4 ghost = texture2D(uSampler, ghostUV);
+                // Add ghost as a darker shadow behind
+                color.rgb = mix(color.rgb, ghost.rgb * 0.3, uGhostOpacity);
+            }
+            
+            // Subtle scanlines
+            float scanline = sin(uv.y * 400.0) * 0.5 + 0.5;
+            scanline = pow(scanline, 2.0) * 0.03;
+            color.rgb -= scanline;
+            
+            // Slight vignette at edges
+            float vignette = 1.0 - dot(vTextureCoord - 0.5, vTextureCoord - 0.5) * 0.5;
+            color.rgb *= vignette;
+            
+            gl_FragColor = color;
+        }
+    `;
+    
+    try {
+        this._crtFilter = new PIXI.Filter(null, crtFragmentShader, {
+            uTime: 0.0,
+            uDistortion: 0.08,      // Barrel distortion amount
+            uGhostOffset: 0.003,    // Ghost shadow offset
+            uGhostOpacity: 0.15     // Ghost shadow opacity
+        });
+        
+        // Apply filter to the entire scene
+        this.filters = [this._crtFilter];
+        this._crtTime = 0;
+    } catch (e) {
+        console.warn('CRT filter not supported:', e);
+    }
+};
+
+/**
+ * Update CRT shader time uniform for subtle animation.
+ */
+CY_Scene_Options.prototype.updateCRTFilter = function() {
+    if (this._crtFilter && this._crtFilter.uniforms) {
+        this._crtTime += 0.016;
+        this._crtFilter.uniforms.uTime = this._crtTime;
+    }
+};
+
 
 //-----------------------------------------------------------------------------
 // Window Creation - Full Width Tab Bar and Action Bar, Centered Options
@@ -126,15 +215,15 @@ CY_Scene_Options.prototype.getScreenOffsets = function() {
 };
 
 /**
- * Create the tab bar window - full width at top.
+ * Create the tab bar window - centered at top with fixed width.
  */
 CY_Scene_Options.prototype.createTabBar = function() {
     var offsets = this.getScreenOffsets();
-    var width = offsets.fullWidth;
-    var height = CY_Scene_Options.TAB_BAR_HEIGHT;
     
     this._tabBar = new CY_Window_TabBar(['SOUND', 'CONTROLS', 'GAMEPLAY']);
-    this._tabBar.move(offsets.x, offsets.y, width, height);
+    // Center the tab bar horizontally
+    var tabBarX = Math.floor((Graphics.boxWidth - this._tabBar.width) / 2);
+    this._tabBar.move(tabBarX, offsets.y, this._tabBar.width, this._tabBar.height);
     this._tabBar.setHandler('ok', this.onTabOk.bind(this));
     this._tabBar.setHandler('cancel', this.popScene.bind(this));
     this._tabBar.opacity = 0; // Transparent window chrome
@@ -289,13 +378,47 @@ CY_Scene_Options.prototype.onOptionsCancel = function() {
 CY_Scene_Options.prototype.update = function() {
     Scene_MenuBase.prototype.update.call(this);
     
+    // Update CRT shader animation
+    this.updateCRTFilter();
     if (Input.isTriggered('pageup')) {
         this.switchTab(-1);
     } else if (Input.isTriggered('pagedown')) {
         this.switchTab(1);
     }
     
+    // Handle tab bar clicks even when options window is active
+    this.updateTabBarClick();
+    
     this.updateActionBarOnFocusChange();
+};
+
+/**
+ * Check for mouse clicks on the tab bar and switch tabs accordingly.
+ * This allows clicking tabs even when the options window has focus.
+ */
+CY_Scene_Options.prototype.updateTabBarClick = function() {
+    if (TouchInput.isTriggered() && this._tabBar) {
+        var tabIndex = this._tabBar.getTabIndexAt(TouchInput.x, TouchInput.y);
+        if (tabIndex >= 0 && tabIndex !== this._tabBar.index()) {
+            // Switch to clicked tab
+            this._tabBar.select(tabIndex);
+            this.loadTabOptions(tabIndex);
+            
+            // If options window was active, keep it active but reset selection
+            if (this._optionsWindow.active) {
+                this._optionsWindow.select(0);
+            }
+            
+            SoundManager.playCursor();
+        } else if (tabIndex >= 0 && this._optionsWindow.active) {
+            // Clicked on current tab while options active - switch focus to tab bar
+            this._optionsWindow.deactivate();
+            this._optionsWindow.deselect();
+            this._tabBar.activate();
+            this.updateActionBar();
+            SoundManager.playCursor();
+        }
+    }
 };
 
 CY_Scene_Options.prototype.updateActionBarOnFocusChange = function() {

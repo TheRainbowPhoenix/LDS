@@ -47,8 +47,9 @@ CY_Window_TabBar.prototype.constructor = CY_Window_TabBar;
  */
 CY_Window_TabBar.prototype.initialize = function(tabs) {
     this._tabs = tabs || ['SOUND', 'CONTROLS', 'GAMEPLAY'];
-    var width = Graphics.width; // Full screen width
-    var height = 48; // Fixed height for tab bar
+    var tabWidth = 120; // Fixed width per tab
+    var width = tabWidth * this._tabs.length + 100; // Add space for L1/R1 indicators
+    var height = 40; // Compact height for tab bar
     CY_Window_Selectable.prototype.initialize.call(this, 0, 0, width, height);
     this.refresh();
     this.select(0);
@@ -93,11 +94,19 @@ CY_Window_TabBar.prototype.maxItems = function() {
 
 /**
  * Calculate the width of each tab item.
- * Divides available content width equally among all tabs.
+ * Fixed width per tab for compact layout.
  * @returns {number} Width of each tab in pixels
  */
 CY_Window_TabBar.prototype.itemWidth = function() {
-    return Math.floor(this.contentsWidth() / this.maxCols());
+    return 120; // Fixed width per tab
+};
+
+/**
+ * Override itemHeight for compact tabs.
+ * @returns {number} Height of each tab item
+ */
+CY_Window_TabBar.prototype.itemHeight = function() {
+    return 28;
 };
 
 //-----------------------------------------------------------------------------
@@ -114,13 +123,15 @@ CY_Window_TabBar.prototype.drawItem = function(index) {
     var rect = this.itemRect(index);
     var isSelected = (index === this.index());
     
+    // Use smaller font for compact tabs
+    this.contents.fontSize = 18;
+    
     // Draw tab text with appropriate color
     if (isSelected) {
         this.changeTextColor(CY_System.Colors.cyan);
         // Draw cyan underline for selected tab
-        // Position underline at bottom of item rect
         var underlineHeight = 2;
-        var underlineY = rect.y + rect.height - 4;
+        var underlineY = rect.y + rect.height - 2;
         this.contents.fillRect(
             rect.x, 
             underlineY, 
@@ -134,15 +145,27 @@ CY_Window_TabBar.prototype.drawItem = function(index) {
     
     // Draw centered tab text
     this.drawText(this._tabs[index], rect.x, rect.y, rect.width, 'center');
+    
+    // Reset font size
+    this.resetFontSettings();
 };
 
 /**
  * Refresh the tab bar contents.
- * Draws all tabs and L1/R1 navigation indicators.
+ * Draws all tabs, L1/R1 navigation indicators, and bottom border.
  */
 CY_Window_TabBar.prototype.refresh = function() {
     CY_Window_Selectable.prototype.refresh.call(this);
     this.drawNavigationIndicators();
+    this.drawBottomBorder();
+};
+
+/**
+ * Draw the bottom border line.
+ */
+CY_Window_TabBar.prototype.drawBottomBorder = function() {
+    var borderY = this.contentsHeight() - 1;
+    this.contents.fillRect(0, borderY, this.contentsWidth(), 1, '#431716');
 };
 
 /**
@@ -150,15 +173,18 @@ CY_Window_TabBar.prototype.refresh = function() {
  * These indicate that shoulder buttons can be used for tab switching.
  */
 CY_Window_TabBar.prototype.drawNavigationIndicators = function() {
-    var indicatorWidth = 40;
-    var y = 0;
+    this.contents.fontSize = 14;
+    var indicatorWidth = 30;
+    var y = 4;
     
     // Draw L1 indicator on left edge
     this.changeTextColor(CY_System.Colors.inactiveText);
-    this.drawText('L1', 10, y, indicatorWidth, 'left');
+    this.drawText('L1', 4, y, indicatorWidth, 'left');
     
     // Draw R1 indicator on right edge
-    this.drawText('R1', this.contentsWidth() - indicatorWidth - 10, y, indicatorWidth, 'right');
+    this.drawText('R1', this.contentsWidth() - indicatorWidth - 4, y, indicatorWidth, 'right');
+    
+    this.resetFontSettings();
 };
 
 //-----------------------------------------------------------------------------
@@ -295,5 +321,43 @@ CY_Window_TabBar.prototype.refreshHighlight = function(w, h) {
         'rgba(0, 240, 255, 0.08)', 
         6
     );
+};
+
+//-----------------------------------------------------------------------------
+// Mouse Click Handling - Allow clicking tabs even when not active
+//-----------------------------------------------------------------------------
+
+/**
+ * Check if a point is inside the tab bar frame.
+ * @param {number} x - Screen X coordinate
+ * @param {number} y - Screen Y coordinate
+ * @returns {boolean} True if point is inside
+ */
+CY_Window_TabBar.prototype.isTouchedInside = function(x, y) {
+    var wx = this.canvasToLocalX(x);
+    var wy = this.canvasToLocalY(y);
+    return wx >= 0 && wy >= 0 && wx < this.width && wy < this.height;
+};
+
+/**
+ * Get the tab index at a screen position.
+ * @param {number} x - Screen X coordinate
+ * @param {number} y - Screen Y coordinate
+ * @returns {number} Tab index or -1 if not on a tab
+ */
+CY_Window_TabBar.prototype.getTabIndexAt = function(x, y) {
+    var localX = this.canvasToLocalX(x) - this.padding;
+    var localY = this.canvasToLocalY(y) - this.padding;
+    
+    if (localX < 0 || localY < 0) return -1;
+    
+    for (var i = 0; i < this.maxItems(); i++) {
+        var rect = this.itemRect(i);
+        if (localX >= rect.x && localX < rect.x + rect.width &&
+            localY >= rect.y && localY < rect.y + rect.height) {
+            return i;
+        }
+    }
+    return -1;
 };
 

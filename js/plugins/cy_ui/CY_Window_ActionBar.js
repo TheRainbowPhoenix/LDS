@@ -130,56 +130,64 @@ CY_Window_ActionBar.prototype.refresh = function() {
     
     var useGamepad = this.isGamepadInput();
     
+    // Use smaller font for action bar
+    this.contents.fontSize = 14;
+    
     // Start from right side with padding
-    var x = this.contentsWidth() - 20;
+    var x = this.contentsWidth() - 16;
     
     // Draw actions from right to left (last action appears rightmost)
     for (var i = this._actions.length - 1; i >= 0; i--) {
         var action = this._actions[i];
         var displayButton = useGamepad ? action.button : this.getKeyboardLabel(action.button);
-        var labelWidth = this.textWidth(action.label) + 10;
-        var btnSize = 28;
+        var labelWidth = this.textWidth(action.label) + 8;
+        var btnSize = 22;
         
         // Draw label first (to the right of button)
         this.changeTextColor(CY_System.Colors.white);
-        this.drawText(action.label, x - labelWidth, 0, labelWidth, 'right');
+        this.drawText(action.label, x - labelWidth, 6, labelWidth, 'right');
         
         // Move x position for button icon
-        x -= labelWidth + 10;
+        x -= labelWidth + 6;
         
         // Draw button icon (circular with letter)
-        this.drawButtonIcon(action.button, displayButton, x - btnSize, 4);
+        this.drawButtonIcon(action.button, displayButton, x - btnSize, 5);
         
         // Move x position for next action with spacing
-        x -= btnSize + 20;
+        x -= btnSize + 16;
     }
+    
+    // Reset font size
+    this.resetFontSettings();
 };
 
 /**
  * Draw a circular button icon with the button letter.
- * @param {string} buttonType - The original button type (for color)
+ * All buttons use cyan (#5FFAFF) background.
+ * @param {string} buttonType - The original button type (for reference)
  * @param {string} displayText - The text to display (gamepad or keyboard)
  * @param {number} x - X position to draw at
  * @param {number} y - Y position to draw at
  */
 CY_Window_ActionBar.prototype.drawButtonIcon = function(buttonType, displayText, x, y) {
-    var size = 28;
+    var size = 22;
     
-    // Draw circular button background
+    // Draw circular button background - all cyan
     var ctx = this.contents._context;
     ctx.save();
     ctx.beginPath();
     ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
-    ctx.fillStyle = this.getButtonColor(buttonType);
+    ctx.fillStyle = '#5FFAFF'; // Cyan for all buttons
     ctx.fill();
     ctx.restore();
     this.contents._baseTexture.update();
     
-    // Draw button letter centered in circle
-    this.changeTextColor(CY_System.Colors.white);
+    // Draw button letter centered in circle with dark text for contrast
     var originalFontSize = this.contents.fontSize;
-    this.contents.fontSize = 16;
-    this.drawText(displayText, x, y + 2, size, 'center');
+    this.contents.fontSize = 11;
+    this.changeTextColor('#000000'); // Dark text on cyan background
+    // Center text vertically in the circle
+    this.drawText(displayText, x, y + 4, size, 'center');
     this.contents.fontSize = originalFontSize;
 };
 

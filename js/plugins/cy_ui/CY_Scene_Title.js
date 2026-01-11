@@ -66,6 +66,7 @@ CY_Scene_Title.prototype.initialize = function() {
 CY_Scene_Title.prototype.create = function() {
     Scene_Base.prototype.create.call(this);
     this.createBackground();
+    this.createSideStripe();
     this.createLogo();
     this.createCommandWindow();
 };
@@ -140,6 +141,27 @@ CY_Scene_Title.prototype.centerSprite = function(sprite) {
     sprite.y = Graphics.height / 2;
     sprite.anchor.x = 0.5;
     sprite.anchor.y = 0.5;
+};
+
+//-----------------------------------------------------------------------------
+// Side Stripe Creation
+//-----------------------------------------------------------------------------
+
+/**
+ * Create the vertical dark red stripe on the left side.
+ * This is a decorative element that spans the full height of the screen.
+ */
+CY_Scene_Title.prototype.createSideStripe = function() {
+    var stripeWidth = 320;
+    var stripeX = 60; // Position to the left of the menu
+    
+    this._sideStripeSprite = new Sprite();
+    this._sideStripeSprite.bitmap = new Bitmap(stripeWidth, Graphics.height);
+    this._sideStripeSprite.bitmap.fillRect(0, 0, stripeWidth, Graphics.height, '#8426245F');
+    this._sideStripeSprite.x = stripeX;
+    this._sideStripeSprite.y = 0;
+    
+    this.addChild(this._sideStripeSprite);
 };
 
 //-----------------------------------------------------------------------------

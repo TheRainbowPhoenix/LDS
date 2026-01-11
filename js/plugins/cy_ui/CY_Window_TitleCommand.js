@@ -278,7 +278,7 @@ CY_Window_TitleCommand.prototype.isContinueEnabled = function() {
  * Draw a command item with Cyberpunk styling.
  * Requirement 4.1: Flat buttons without borders
  * Requirement 4.3: Cyan highlight for selected items
- * Requirement 4.4: Inactive text color for unselected items
+ * Requirement 4.4: Light red text color for unselected items
  * @param {number} index - Index of the item to draw
  */
 CY_Window_TitleCommand.prototype.drawItem = function(index) {
@@ -288,13 +288,13 @@ CY_Window_TitleCommand.prototype.drawItem = function(index) {
     
     // Determine text color based on state
     // Requirement 4.3: Cyan for selected
-    // Requirement 4.4: Inactive color for unselected
-    if (isSelected && isEnabled) {
-        this.changeTextColor(CY_System.Colors.cyan);
-    } else if (!isEnabled) {
+    // Requirement 4.4: Light red for unselected, inactive for disabled
+    if (!isEnabled) {
         this.changeTextColor(CY_System.Colors.inactiveText);
+    } else if (isSelected) {
+        this.changeTextColor(CY_System.Colors.cyan);
     } else {
-        this.changeTextColor(CY_System.Colors.white);
+        this.changeTextColor(CY_System.Colors.lightRed);
     }
     
     // Set paint opacity based on enabled state

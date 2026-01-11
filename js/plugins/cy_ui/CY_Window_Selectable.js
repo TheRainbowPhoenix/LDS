@@ -115,6 +115,9 @@ CY_Window_Selectable.prototype.gaugeBackColor = CY_Window_Base.prototype.gaugeBa
 CY_Window_Selectable.prototype.initialize = function(x, y, width, height) {
     this._cyBackSprite = null;
     this._highlightSprite = null;
+    this._highlightTargetAlpha = 0;
+    this._highlightCurrentAlpha = 0;
+    this._lastSelectedIndex = -1;
     Window_Selectable.prototype.initialize.call(this, x, y, width, height);
     this.createCyBackground();
     this.createHighlightSprite();
@@ -158,14 +161,53 @@ CY_Window_Selectable.prototype.updateCursor = function() {
 CY_Window_Selectable.prototype.updateHighlight = function() {
     if (!this._highlightSprite) return;
     
-    if (this.index() >= 0 && this.active) {
+    var shouldShow = this.index() >= 0 && this.active;
+    
+    // Set target alpha for fade animation
+    this._highlightTargetAlpha = shouldShow ? 1.0 : 0;
+    
+    if (shouldShow) {
         var rect = this.itemRect(this.index());
         // Position highlight relative to window padding and scroll
         this._highlightSprite.x = rect.x + this.padding;
         this._highlightSprite.y = rect.y + this.padding;
         this._highlightSprite.visible = true;
-        this.refreshHighlight(rect.width, rect.height);
-    } else {
+        
+        // Only refresh graphics if selection changed
+        if (this._lastSelectedIndex !== this.index()) {
+            this.refreshHighlight(rect.width, rect.height);
+            this._lastSelectedIndex = this.index();
+            // Reset alpha for instant appearance on new selection
+            this._highlightCurrentAlpha = 1.0;
+        }
+    }
+};
+
+/**
+ * Update highlight fade animation.
+ * Smoothly transitions highlight alpha for polish.
+ */
+CY_Window_Selectable.prototype.updateHighlightFade = function() {
+    if (!this._highlightSprite) return;
+    
+    var fadeSpeed = 0.15; // Adjust for faster/slower fade
+    
+    if (this._highlightCurrentAlpha < this._highlightTargetAlpha) {
+        this._highlightCurrentAlpha = Math.min(
+            this._highlightCurrentAlpha + fadeSpeed,
+            this._highlightTargetAlpha
+        );
+    } else if (this._highlightCurrentAlpha > this._highlightTargetAlpha) {
+        this._highlightCurrentAlpha = Math.max(
+            this._highlightCurrentAlpha - fadeSpeed,
+            this._highlightTargetAlpha
+        );
+    }
+    
+    this._highlightSprite.alpha = this._highlightCurrentAlpha * (this.openness / 255);
+    
+    // Hide completely when faded out
+    if (this._highlightCurrentAlpha <= 0) {
         this._highlightSprite.visible = false;
     }
 };
@@ -230,10 +272,8 @@ CY_Window_Selectable.prototype.update = function() {
         this._cyBackSprite.alpha = this.openness / 255;
     }
     
-    // Update highlight visibility based on window openness
-    if (this._highlightSprite) {
-        this._highlightSprite.alpha = this.openness / 255;
-    }
+    // Update highlight fade animation
+    this.updateHighlightFade();
 };
 
 /**
@@ -250,15 +290,17 @@ CY_Window_Selectable.prototype.select = function(index) {
  */
 CY_Window_Selectable.prototype.activate = function() {
     Window_Selectable.prototype.activate.call(this);
+    this._highlightTargetAlpha = 1.0;
     this.updateHighlight();
 };
 
 /**
- * Override deactivate to update highlight when window becomes inactive.
+ * Override deactivate to fade out highlight when window becomes inactive.
  */
 CY_Window_Selectable.prototype.deactivate = function() {
     Window_Selectable.prototype.deactivate.call(this);
-    this.updateHighlight();
+    this._highlightTargetAlpha = 0;
+    // Don't call updateHighlight here - let the fade handle it
 };
 
 /**

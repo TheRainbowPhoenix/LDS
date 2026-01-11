@@ -38,6 +38,10 @@ function CY_Window_ActionBar() {
 CY_Window_ActionBar.prototype = Object.create(CY_Window_Base.prototype);
 CY_Window_ActionBar.prototype.constructor = CY_Window_ActionBar;
 
+//-----------------------------------------------------------------------------
+// Initialization
+//-----------------------------------------------------------------------------
+
 /**
  * Initialize the action bar window.
  * Positions at bottom of screen with full width.
@@ -47,8 +51,63 @@ CY_Window_ActionBar.prototype.initialize = function() {
     var height = 48;
     var y = Graphics.boxHeight - height;
     this._actions = [];
+    this._lastInputType = null;
     CY_Window_Base.prototype.initialize.call(this, 0, y, width, height);
     this.refresh();
+};
+
+//-----------------------------------------------------------------------------
+// Input Detection
+//-----------------------------------------------------------------------------
+
+/**
+ * Check if using gamepad input.
+ * @returns {boolean} True if last input was from gamepad
+ */
+CY_Window_ActionBar.prototype.isGamepadInput = function() {
+    // Check if gamepad is connected and was last used
+    if (Input._gamepadStates && Input._gamepadStates.length > 0) {
+        for (var i = 0; i < Input._gamepadStates.length; i++) {
+            if (Input._gamepadStates[i]) return true;
+        }
+    }
+    return false;
+};
+
+/**
+ * Get keyboard key label for a button.
+ * @param {string} button - Gamepad button identifier
+ * @returns {string} Keyboard equivalent
+ */
+CY_Window_ActionBar.prototype.getKeyboardLabel = function(button) {
+    switch (button) {
+        case 'A': return 'Z';      // Confirm
+        case 'B': return 'X';      // Cancel
+        case 'X': return 'A';      // Menu
+        case 'Y': return 'S';      // Special
+        case 'L1': return 'Q';     // Page up
+        case 'R1': return 'E';     // Page down
+        default: return button;
+    }
+};
+
+//-----------------------------------------------------------------------------
+// Update
+//-----------------------------------------------------------------------------
+
+/**
+ * Update the action bar.
+ * Refreshes display if input type changes.
+ */
+CY_Window_ActionBar.prototype.update = function() {
+    CY_Window_Base.prototype.update.call(this);
+    
+    // Check for input type change
+    var currentInputType = this.isGamepadInput() ? 'gamepad' : 'keyboard';
+    if (this._lastInputType !== currentInputType) {
+        this._lastInputType = currentInputType;
+        this.refresh();
+    }
 };
 
 /**
@@ -69,12 +128,15 @@ CY_Window_ActionBar.prototype.refresh = function() {
     if (!this.contents) return;
     this.contents.clear();
     
+    var useGamepad = this.isGamepadInput();
+    
     // Start from right side with padding
     var x = this.contentsWidth() - 20;
     
     // Draw actions from right to left (last action appears rightmost)
     for (var i = this._actions.length - 1; i >= 0; i--) {
         var action = this._actions[i];
+        var displayButton = useGamepad ? action.button : this.getKeyboardLabel(action.button);
         var labelWidth = this.textWidth(action.label) + 10;
         var btnSize = 28;
         
@@ -86,7 +148,7 @@ CY_Window_ActionBar.prototype.refresh = function() {
         x -= labelWidth + 10;
         
         // Draw button icon (circular with letter)
-        this.drawButtonIcon(action.button, x - btnSize, 4);
+        this.drawButtonIcon(action.button, displayButton, x - btnSize, 4);
         
         // Move x position for next action with spacing
         x -= btnSize + 20;
@@ -95,11 +157,12 @@ CY_Window_ActionBar.prototype.refresh = function() {
 
 /**
  * Draw a circular button icon with the button letter.
- * @param {string} button - The button identifier (A, B, X, Y, etc.)
+ * @param {string} buttonType - The original button type (for color)
+ * @param {string} displayText - The text to display (gamepad or keyboard)
  * @param {number} x - X position to draw at
  * @param {number} y - Y position to draw at
  */
-CY_Window_ActionBar.prototype.drawButtonIcon = function(button, x, y) {
+CY_Window_ActionBar.prototype.drawButtonIcon = function(buttonType, displayText, x, y) {
     var size = 28;
     
     // Draw circular button background
@@ -107,7 +170,7 @@ CY_Window_ActionBar.prototype.drawButtonIcon = function(button, x, y) {
     ctx.save();
     ctx.beginPath();
     ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
-    ctx.fillStyle = this.getButtonColor(button);
+    ctx.fillStyle = this.getButtonColor(buttonType);
     ctx.fill();
     ctx.restore();
     this.contents._baseTexture.update();
@@ -116,7 +179,7 @@ CY_Window_ActionBar.prototype.drawButtonIcon = function(button, x, y) {
     this.changeTextColor(CY_System.Colors.white);
     var originalFontSize = this.contents.fontSize;
     this.contents.fontSize = 16;
-    this.drawText(button, x, y + 2, size, 'center');
+    this.drawText(displayText, x, y + 2, size, 'center');
     this.contents.fontSize = originalFontSize;
 };
 

@@ -60,11 +60,13 @@ CY_Scene_Options.prototype.terminate = function() {
 
 /**
  * Start the scene.
- * Activates the options list by default.
+ * Activates the tab bar by default (user selects category first).
  */
 CY_Scene_Options.prototype.start = function() {
     Scene_MenuBase.prototype.start.call(this);
-    this._optionsWindow.activate();
+    this._tabBar.activate();
+    this._lastFocus = 'tabBar';
+    this.updateActionBar();
 };
 
 //-----------------------------------------------------------------------------
@@ -72,6 +74,18 @@ CY_Scene_Options.prototype.start = function() {
 // Requirement 5.2: Horizontal tab bar with categories (Sound, Controls, Gameplay)
 // Requirement 5.6: Bottom action bar showing available controls
 //-----------------------------------------------------------------------------
+
+/**
+ * Create the tab bar window.
+ * Displays Sound, Controls, Gameplay tabs at the top.
+ * Acts as category selector similar to YEP_OptionsCore.
+ */
+CY_Scene_Options.prototype.createTabBar = function() {
+    this._tabBar = new CY_Window_TabBar(['SOUND', 'CONTROLS', 'GAMEPLAY']);
+    this._tabBar.setHandler('ok', this.onTabOk.bind(this));
+    this._tabBar.setHandler('cancel', this.popScene.bind(this));
+    this.addWindow(this._tabBar);
+};
 
 /**
  * Create the options window.
@@ -85,8 +99,7 @@ CY_Scene_Options.prototype.createOptionsWindow = function() {
     // Instantiate the custom list window
     this._optionsWindow = new CY_Window_OptionsList(0, y, Graphics.boxWidth, height);
     
-    // Set Handlers
-    // Note: Standard calls popScene, but we redirect to TabBar first for UI flow
+    // Set Handlers - cancel goes back to tab bar
     this._optionsWindow.setHandler('cancel', this.onOptionsCancel.bind(this));
     
     this.addWindow(this._optionsWindow);
@@ -96,42 +109,49 @@ CY_Scene_Options.prototype.createOptionsWindow = function() {
 };
 
 /**
- * Create the tab bar window.
- * Displays Sound, Controls, Gameplay tabs at the top.
- */
-CY_Scene_Options.prototype.createTabBar = function() {
-    this._tabBar = new CY_Window_TabBar(['SOUND', 'CONTROLS', 'GAMEPLAY']);
-    this._tabBar.setHandler('ok', this.onTabOk.bind(this));
-    this._tabBar.setHandler('cancel', this.popScene.bind(this));
-    this.addWindow(this._tabBar);
-};
-
-/**
- * Create the options list window.
- * Displays options for the currently selected tab.
- */
-// CY_Scene_Options.prototype.createOptionsList = function() {
-//     var y = this._tabBar.height;
-//     var height = Graphics.boxHeight - y - 48; // Leave room for action bar
-//     this._optionsList = new CY_Window_OptionsList(0, y, Graphics.boxWidth, height);
-//     this._optionsList.setHandler('cancel', this.onOptionsCancel.bind(this));
-//     this.addWindow(this._optionsList);
-//     // Load initial tab options (Sound tab)
-//     this.loadTabOptions(0);
-// };
-
-/**
  * Create the action bar window.
  * Displays available controls at the bottom of the screen.
+ * Updates based on current context.
  */
 CY_Scene_Options.prototype.createActionBar = function() {
     this._actionBar = new CY_Window_ActionBar();
-    this._actionBar.setActions([
-        { button: 'B', label: 'Close' },
-        { button: 'Y', label: 'Restore Defaults' },
-        { button: 'A', label: 'Select' }
-    ]);
+    this.updateActionBar();
     this.addWindow(this._actionBar);
+};
+
+/**
+ * Update action bar based on current active window.
+ */
+CY_Scene_Options.prototype.updateActionBar = function() {
+    if (!this._actionBar) return;
+    
+    var actions = [];
+    
+    if (this._tabBar && this._tabBar.active) {
+        // Tab bar is active
+        actions = [
+            { button: 'B', label: 'Back' },
+            { button: 'L1', label: 'Prev Tab' },
+            { button: 'R1', label: 'Next Tab' },
+            { button: 'A', label: 'Select' }
+        ];
+    } else if (this._optionsWindow && this._optionsWindow.active) {
+        // Options list is active
+        actions = [
+            { button: 'B', label: 'Back' },
+            { button: 'L1', label: 'Prev Tab' },
+            { button: 'R1', label: 'Next Tab' },
+            { button: 'A', label: 'Adjust' }
+        ];
+    } else {
+        // Default
+        actions = [
+            { button: 'B', label: 'Close' },
+            { button: 'A', label: 'Select' }
+        ];
+    }
+    
+    this._actionBar.setActions(actions);
 };
 
 //-----------------------------------------------------------------------------
@@ -187,11 +207,13 @@ CY_Scene_Options.prototype.loadTabOptions = function(tabIndex) {
 
 /**
  * Handle tab selection (OK pressed on tab bar).
- * Reloads options for the selected tab and reactivates tab bar.
+ * Activates the options window for the selected tab.
  */
 CY_Scene_Options.prototype.onTabOk = function() {
     this.loadTabOptions(this._tabBar.index());
-    this._tabBar.activate();
+    this._optionsWindow.activate();
+    this._optionsWindow.select(0);
+    this.updateActionBar();
 };
 
 /**
@@ -199,8 +221,9 @@ CY_Scene_Options.prototype.onTabOk = function() {
  * Returns focus to the tab bar.
  */
 CY_Scene_Options.prototype.onOptionsCancel = function() {
+    this._optionsWindow.deselect();
     this._tabBar.activate();
-    this._optionsWindow.deactivate();
+    this.updateActionBar();
 };
 
 
@@ -215,11 +238,27 @@ CY_Scene_Options.prototype.onOptionsCancel = function() {
 CY_Scene_Options.prototype.update = function() {
     Scene_MenuBase.prototype.update.call(this);
     
-    // Global tab switching logic
+    // Global tab switching logic - works from any window
     if (Input.isTriggered('pageup')) {
         this.switchTab(-1);
     } else if (Input.isTriggered('pagedown')) {
         this.switchTab(1);
+    }
+    
+    // Update action bar when window focus changes
+    this.updateActionBarOnFocusChange();
+};
+
+/**
+ * Track focus changes and update action bar accordingly.
+ */
+CY_Scene_Options.prototype.updateActionBarOnFocusChange = function() {
+    var currentFocus = this._tabBar.active ? 'tabBar' : 
+                       this._optionsWindow.active ? 'options' : 'none';
+    
+    if (this._lastFocus !== currentFocus) {
+        this._lastFocus = currentFocus;
+        this.updateActionBar();
     }
 };
 
@@ -235,6 +274,12 @@ CY_Scene_Options.prototype.switchTab = function(direction) {
     
     this._tabBar.select(newIndex);
     this.loadTabOptions(newIndex);
+    
+    // If options window was active, keep it active with new content
+    if (this._optionsWindow.active) {
+        this._optionsWindow.select(0);
+    }
+    
     SoundManager.playCursor();
 };
 

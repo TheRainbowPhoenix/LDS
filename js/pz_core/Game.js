@@ -707,7 +707,17 @@ Phaser.Game.prototype = {
 
         this.math = Phaser.Math;
 
-        this.scale = new Phaser.ScaleManager(this, this.width, this.height);
+        this.scale = { 
+            width: Graphics.width, 
+            height: Graphics.height, 
+            boot: function() {}, 
+            preUpdate: function() {},
+            pauseUpdate: function() {},
+            destroy: function() {},
+            updateLayout: function() {} 
+        };
+
+        // new Phaser.ScaleManager(this, this.width, this.height);
 
         // Root Stage
         this.stage = new Phaser.Stage(this);

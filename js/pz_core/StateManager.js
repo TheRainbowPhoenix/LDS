@@ -397,7 +397,7 @@ Phaser.StateManager.prototype = {
 
             this.game.time.removeAll();
 
-            this.game.scale.reset(this._clearWorld);
+            // this.game.scale.reset(this._clearWorld);
 
             if (this.game.debug)
             {

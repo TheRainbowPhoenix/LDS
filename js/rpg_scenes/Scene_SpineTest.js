@@ -47,7 +47,7 @@ Scene_SpineTest.prototype.createBackButton = function() {
     button.anchor.set(0.5);
     button.interactive = true;
     button.buttonMode = true;
-    button.on('pointerdown', () => SceneManager.pop());
+    button.on('pointerdown', () => SceneManager.goto(Scene_Title));
     this.addChild(button);
 };
 
@@ -55,7 +55,7 @@ Scene_SpineTest.prototype.update = function() {
     Scene_Base.prototype.update.call(this);
 
     if (Input.isTriggered('cancel') || Input.isTriggered('menu')) {
-        SceneManager.pop();
+        SceneManager.goto(Scene_Title);
     }
 };
 

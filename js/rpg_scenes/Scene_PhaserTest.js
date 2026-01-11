@@ -77,15 +77,15 @@ Scene_PhaserTest.prototype.runPhaserLogic = function() {
             var button = game.add.text(game.world.centerX, game.world.centerY, "Back to Menu", { font: "24px Arial", fill: "#fff", backgroundColor: "#333", padding: 10 });
             button.anchor.set(0.5);
             button.inputEnabled = true;
-             button.events.onInputDown.add(function() {
+            button.events.onInputDown.add(function() {
                 // SceneManager.pop();
-		SceneManager.goto(Scene_Title);
+		        SceneManager.goto(Scene_Title);
             });
 
             // Add a timer to go back to the menu after 30 seconds
             game.time.events.add(Phaser.Timer.SECOND * 120, function() {
-		console.log("ttt");
-		    SceneManager.goto(Scene_Title);
+		        console.log("ttt");
+		        SceneManager.goto(Scene_Title);
                 // SceneManager.pop();
             });
         },
@@ -133,7 +133,8 @@ Scene_PhaserTest.prototype.update = function() {
 
     // Escape Key to return to Title/Map
     if (Input.isTriggered('cancel') || Input.isTriggered('menu')) {
-        this.popScene();
+        // this.popScene();
+        SceneManager.goto(Scene_Title);
     }
 };
 

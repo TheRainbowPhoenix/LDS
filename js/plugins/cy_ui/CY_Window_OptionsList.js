@@ -205,7 +205,7 @@ CY_Window_OptionsList.prototype.drawHeader = function(opt, rect) {
 
 /**
  * Draw a toggle control with OFF/ON buttons.
- * OFF button uses darkRed when active, ON button uses cyan when active.
+ * OFF button has cut corner on bottom-LEFT, ON button has cut corner on bottom-RIGHT.
  * @param {Object} opt - Option object
  * @param {Object} rect - Drawing rectangle
  * @param {boolean} isSelected - Whether this option is currently selected
@@ -225,13 +225,13 @@ CY_Window_OptionsList.prototype.drawToggle = function(opt, rect, isSelected) {
     var btnHeight = rect.height - 8;
     var btnY = rect.y + 4;
     
-    // Draw OFF button
+    // Draw OFF button (cut corner on bottom-LEFT)
     var offColor = !value ? CY_System.Colors.darkRed : 'rgba(50,50,50,0.5)';
-    CY_System.drawCutCornerRect(this.contents, controlX, btnY, btnWidth, btnHeight, offColor, 6);
+    CY_System.drawCutCornerRectLeft(this.contents, controlX, btnY, btnWidth, btnHeight, offColor, 6);
     this.changeTextColor(!value ? CY_System.Colors.white : CY_System.Colors.inactiveText);
     this.drawText('OFF', controlX, rect.y, btnWidth, 'center');
     
-    // Draw ON button
+    // Draw ON button (cut corner on bottom-RIGHT)
     var onColor = value ? CY_System.Colors.cyan : 'rgba(50,50,50,0.5)';
     CY_System.drawCutCornerRect(this.contents, controlX + btnWidth + 8, btnY, btnWidth, btnHeight, onColor, 6);
     this.changeTextColor(value ? CY_System.Colors.white : CY_System.Colors.inactiveText);
@@ -550,5 +550,49 @@ CY_Window_OptionsList.prototype.currentSymbol = function() {
 CY_Window_OptionsList.prototype.isCurrentType = function(type) {
     var opt = this.currentOption();
     return opt && opt.type === type;
+};
+
+//-----------------------------------------------------------------------------
+// Subtle Highlight Override for Settings
+//-----------------------------------------------------------------------------
+
+/**
+ * Override refreshHighlight for subtle corner hints instead of full highlight.
+ * Settings menu uses L-shaped corner hints for a more subtle selection indication.
+ * @param {number} w - Width of the highlight area
+ * @param {number} h - Height of the highlight area
+ */
+CY_Window_OptionsList.prototype.refreshHighlight = function(w, h) {
+    var bmp = this._highlightSprite.bitmap;
+    
+    // Resize bitmap if dimensions changed
+    if (bmp.width !== w || bmp.height !== h) {
+        bmp.resize(w, h);
+    }
+    
+    bmp.clear();
+    
+    // Draw very subtle background (0.1 opacity)
+    CY_System.drawCutCornerRect(
+        bmp, 
+        0, 
+        0, 
+        w, 
+        h, 
+        'rgba(92, 245, 250, 0.08)', // Very subtle cyan
+        6
+    );
+    
+    // Draw L-shaped corner hints instead of full border
+    CY_System.drawCornerHints(
+        bmp,
+        0,
+        0,
+        w,
+        h,
+        'rgba(92, 245, 250, 0.5)', // Cyan with some opacity
+        10, // Corner size
+        2   // Line width
+    );
 };
 

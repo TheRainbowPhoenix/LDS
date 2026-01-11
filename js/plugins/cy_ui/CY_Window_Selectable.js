@@ -138,9 +138,15 @@ CY_Window_Selectable.prototype.createHighlightSprite = function() {
     var w = this.itemWidth();
     var h = this.itemHeight();
     this._highlightSprite.bitmap = new Bitmap(w, h);
-    // Add highlight sprite to the window's contents layer
-    // Position it above the background but below the contents
-    this.addChild(this._highlightSprite);
+    // Add highlight sprite behind the contents sprite
+    // Find the contents sprite index and insert before it
+    if (this._clientArea) {
+        // MZ style - add to client area at index 0 (behind contents)
+        this._clientArea.addChildAt(this._highlightSprite, 0);
+    } else {
+        // MV style - add to window at appropriate index
+        this.addChildAt(this._highlightSprite, this.children.length > 0 ? 1 : 0);
+    }
 };
 
 /**
@@ -168,9 +174,14 @@ CY_Window_Selectable.prototype.updateHighlight = function() {
     
     if (shouldShow) {
         var rect = this.itemRect(this.index());
-        // Position highlight relative to window padding and scroll
-        this._highlightSprite.x = rect.x + this.padding;
-        this._highlightSprite.y = rect.y + this.padding;
+        // Position highlight - if in clientArea, no padding offset needed
+        if (this._clientArea) {
+            this._highlightSprite.x = rect.x;
+            this._highlightSprite.y = rect.y;
+        } else {
+            this._highlightSprite.x = rect.x + this.padding;
+            this._highlightSprite.y = rect.y + this.padding;
+        }
         this._highlightSprite.visible = true;
         
         // Only refresh graphics if selection changed
@@ -214,7 +225,7 @@ CY_Window_Selectable.prototype.updateHighlightFade = function() {
 
 /**
  * Refresh the highlight sprite graphics.
- * Draws a semi-transparent cyan background with cut corner and border on all sides.
+ * Draws a dark cyan background with cut corner and cyan border on all sides.
  * Requirement 4.3: Cyan highlight for selected items
  * Requirement 4.4: Border on all sides including cut corner
  * @param {number} w - Width of the highlight
@@ -230,7 +241,7 @@ CY_Window_Selectable.prototype.refreshHighlight = function(w, h) {
     
     bmp.clear();
     
-    // Draw semi-transparent cyan background with cut corner
+    // Draw dark cyan background with cut corner
     var highlightCutSize = 8;
     CY_System.drawCutCornerRect(
         bmp, 
@@ -238,7 +249,7 @@ CY_Window_Selectable.prototype.refreshHighlight = function(w, h) {
         0, 
         w, 
         h, 
-        'rgba(0, 240, 255, 0.15)', 
+        'rgba(27, 14, 24, 0.85)', // Dark cyan/purple background (#1B0E18 with opacity)
         highlightCutSize
     );
     

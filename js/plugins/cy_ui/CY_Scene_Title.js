@@ -150,18 +150,98 @@ CY_Scene_Title.prototype.centerSprite = function(sprite) {
 /**
  * Create the vertical dark red stripe on the left side.
  * This is a decorative element that spans the full height of the screen.
+ * Features: scanlines, left/right borders, inner box shadow effect.
  */
 CY_Scene_Title.prototype.createSideStripe = function() {
     var stripeWidth = 320;
-    var stripeX = 60; // Position to the left of the menu
+    var stripeX = 60;
+    var stripeHeight = Graphics.height;
     
     this._sideStripeSprite = new Sprite();
-    this._sideStripeSprite.bitmap = new Bitmap(stripeWidth, Graphics.height);
-    this._sideStripeSprite.bitmap.fillRect(0, 0, stripeWidth, Graphics.height, '#8426245F');
+    this._sideStripeSprite.bitmap = new Bitmap(stripeWidth, stripeHeight);
+    
+    var bmp = this._sideStripeSprite.bitmap;
+    var ctx = bmp._context;
+    
+    // Base fill with semi-transparent dark red
+    bmp.fillRect(0, 0, stripeWidth, stripeHeight, 'rgba(132, 38, 36, 0.37)');
+    
+    // Draw inner box shadow effect (darker at edges, lighter in center)
+    this.drawInnerBoxShadow(ctx, stripeWidth, stripeHeight);
+    
+    // Draw scanlines effect
+    this.drawScanlines(ctx, stripeWidth, stripeHeight);
+    
+    // Draw left and right borders
+    var borderWidth = 2;
+    var borderColor = 'rgba(255, 97, 88, 0.6)'; // #FF6158 with opacity
+    bmp.fillRect(0, 0, borderWidth, stripeHeight, borderColor);
+    bmp.fillRect(stripeWidth - borderWidth, 0, borderWidth, stripeHeight, borderColor);
+    
+    bmp._baseTexture.update();
+    
     this._sideStripeSprite.x = stripeX;
     this._sideStripeSprite.y = 0;
     
     this.addChild(this._sideStripeSprite);
+};
+
+/**
+ * Draw inner box shadow effect on the stripe.
+ * Creates depth by darkening left and right edges only.
+ * @param {CanvasRenderingContext2D} ctx - Canvas context
+ * @param {number} width - Width of the stripe
+ * @param {number} height - Height of the stripe
+ */
+CY_Scene_Title.prototype.drawInnerBoxShadow = function(ctx, width, height) {
+    var shadowColor = 'rgba(132, 38, 36, 0.5)'; // #842624 with opacity
+    var shadowSize = 40;
+    
+    // Extend beyond top and bottom to hide those shadows
+    var extendY = -100;
+    var extendedHeight = height + 200;
+    
+    ctx.save();
+    
+    // Left edge shadow (gradient from dark to transparent)
+    var leftGradient = ctx.createLinearGradient(0, 0, shadowSize, 0);
+    leftGradient.addColorStop(0, shadowColor);
+    leftGradient.addColorStop(1, 'rgba(132, 38, 36, 0)');
+    ctx.fillStyle = leftGradient;
+    ctx.fillRect(0, extendY, shadowSize, extendedHeight);
+    
+    // Right edge shadow
+    var rightGradient = ctx.createLinearGradient(width - shadowSize, 0, width, 0);
+    rightGradient.addColorStop(0, 'rgba(132, 38, 36, 0)');
+    rightGradient.addColorStop(1, shadowColor);
+    ctx.fillStyle = rightGradient;
+    ctx.fillRect(width - shadowSize, extendY, shadowSize, extendedHeight);
+    
+    ctx.restore();
+};
+
+/**
+ * Draw scanlines effect on the stripe.
+ * Creates horizontal lines with varying opacity for CRT/cyberpunk feel.
+ * @param {CanvasRenderingContext2D} ctx - Canvas context
+ * @param {number} width - Width of the stripe
+ * @param {number} height - Height of the stripe
+ */
+CY_Scene_Title.prototype.drawScanlines = function(ctx, width, height) {
+    ctx.save();
+    
+    var lineHeight = 2;
+    var gap = 2;
+    var baseColor = [132, 38, 36]; // #842624 RGB
+    
+    for (var y = 0; y < height; y += lineHeight + gap) {
+        // Vary opacity for more organic look
+        var opacityVariation = 0.08 + Math.random() * 0.12; // 0.08 to 0.20
+        ctx.fillStyle = 'rgba(' + baseColor[0] + ',' + baseColor[1] + ',' + baseColor[2] + ',' + opacityVariation + ')';
+        ctx.fillRect(0, y, width, lineHeight);
+    }
+    
+    ctx.restore();
 };
 
 //-----------------------------------------------------------------------------

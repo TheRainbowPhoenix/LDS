@@ -228,6 +228,41 @@ CY_Window_TitleCommand.prototype.maxItems = function() {
     return this._list ? this._list.length : 0;
 };
 
+/**
+ * Get the height of each item row.
+ * Smaller than default for more compact menu.
+ * @returns {number} Item height in pixels
+ */
+CY_Window_TitleCommand.prototype.itemHeight = function() {
+    return 32;
+};
+
+/**
+ * Get the standard font size.
+ * Smaller text for title menu.
+ * @returns {number} Font size in pixels
+ */
+CY_Window_TitleCommand.prototype.standardFontSize = function() {
+    return 22;
+};
+
+/**
+ * Get the standard padding.
+ * More padding for cleaner look.
+ * @returns {number} Padding in pixels
+ */
+CY_Window_TitleCommand.prototype.standardPadding = function() {
+    return 12;
+};
+
+/**
+ * Get the text padding.
+ * @returns {number} Text padding in pixels
+ */
+CY_Window_TitleCommand.prototype.textPadding = function() {
+    return 8;
+};
+
 //-----------------------------------------------------------------------------
 // Positioning
 //-----------------------------------------------------------------------------

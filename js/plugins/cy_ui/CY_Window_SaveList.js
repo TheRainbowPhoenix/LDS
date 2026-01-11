@@ -149,7 +149,7 @@ CY_Window_SaveList.prototype.drawSaveSlotContent = function(index, info, rect) {
         if (info.timestamp) {
             var date = new Date(info.timestamp);
             var dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
-            this.drawText(dateStr, x, y + contentHeight - 16, w, 'right');
+            this.drawText(dateStr, x, y + contentHeight - 24, w, 'right');
         }
     } else {
         // Empty slot

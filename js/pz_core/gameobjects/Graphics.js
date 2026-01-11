@@ -1103,7 +1103,8 @@ Phaser.Graphics.prototype._renderCanvas = function (renderSession)
         var tx = (transform.tx * renderSession.resolution) + renderSession.shakeX;
         var ty = (transform.ty * renderSession.resolution) + renderSession.shakeY;
 
-        context.setTransform(transform.a * resolution,
+        // context.setTransform(transform.a * resolution,
+        this.worldTransform.setTransform(transform.a * resolution,
             transform.b * resolution,
             transform.c * resolution,
             transform.d * resolution,

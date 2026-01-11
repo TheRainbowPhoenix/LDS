@@ -295,6 +295,7 @@ CY_Window_TitleCommand.prototype.makeCommandList = function() {
     this.addCommand('SETTINGS', 'options', true);
     this.addCommand('CREDITS', 'credits', true);
     this.addCommand('PHASER', 'phaser', true);
+    this.addCommand('SPINE', 'spine', true);
 };
 
 /**

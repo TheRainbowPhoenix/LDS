@@ -22,6 +22,7 @@
     "copy:main": "cpx './js/main.js' ./game/js/",
     "copy:plugins": "cpx './plugins/*.js' ./game/js/plugins/",
     "copy:cy_ui": "cpx './dist/cy_ui.js' ./game/js/plugins/",
+    "copy:spine": "cpx './template/spine/**/*' ./game/spine/",
     "copy:template": "cpx './template/**/*' ./game/",
     "copy": "run-p copy:*",
     "copy-all": "node copy-all.js ./corescript",

@@ -23,5 +23,6 @@
   "js/rpg_scenes/Scene_Battle.js",
   "js/rpg_scenes/Scene_PhaserMap.js",
   "js/rpg_scenes/Scene_PhaserTest.js",
+  "js/rpg_scenes/Scene_SpineTest.js",
   "js/rpg_scenes/Scene_Gameover.js"
 ]

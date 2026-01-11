@@ -707,17 +707,7 @@ Phaser.Game.prototype = {
 
         this.math = Phaser.Math;
 
-        // Mock Scale Manager (RMMV handles scaling)
-        // We create a dummy object or a lightweight adapter if needed
-        this.scale = { 
-            width: this.width, 
-            height: this.height, 
-            boot: function() {}, 
-            preUpdate: function() {},
-            pauseUpdate: function() {},
-            destroy: function() {},
-            updateLayout: function() {} 
-        };
+        this.scale = new Phaser.ScaleManager(this, this.width, this.height);
 
         // Root Stage
         this.stage = new Phaser.Stage(this);

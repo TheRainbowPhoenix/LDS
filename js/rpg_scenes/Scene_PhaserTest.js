@@ -70,14 +70,19 @@ Scene_PhaserTest.prototype.runPhaserLogic = function() {
             
             // Add some text
             var style = { font: "bold 32px Arial", fill: "#fff", boundsAlignH: "center", boundsAlignV: "middle" };
-            this.text = game.add.text(0, 0, "Phaser running in RMMV!", style);
-            this.text.setTextBounds(0, 100, 800, 100);
+            this.text = game.add.text(game.world.centerX, 100, "Phaser running in RMMV!", style);
+            this.text.anchor.set(0.5, 0);
 
             // Add a button to go back to the menu
-            var button = game.add.text(game.world.centerX, game.world.centerY + 100, "Back to Menu", { font: "24px Arial", fill: "#fff", backgroundColor: "#333", padding: 10 });
+            var button = game.add.text(game.world.centerX, game.world.centerY, "Back to Menu", { font: "24px Arial", fill: "#fff", backgroundColor: "#333", padding: 10 });
             button.anchor.set(0.5);
             button.inputEnabled = true;
             button.events.onInputDown.add(function() {
+                SceneManager.pop();
+            });
+
+            // Add a timer to go back to the menu after 30 seconds
+            game.time.events.add(Phaser.Timer.SECOND * 30, function() {
                 SceneManager.pop();
             });
         },

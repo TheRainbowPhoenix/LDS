@@ -80,14 +80,17 @@ CY_Scene_File.prototype.titleText = function() {
 // Title Bar
 //-----------------------------------------------------------------------------
 
+CY_Scene_File.prototype.ui_margin = -25
+
 CY_Scene_File.prototype.createTitleBar = function() {
+    var offsets = this.getScreenOffsets();
     var lensPadding = this.getLensPadding();
     
-    // Title bar sprite - positioned at screen coordinates (no offset needed for sprites)
+    // Title bar sprite - needs negative offset to reach screen edge (scene is positioned at box area)
     this._titleBarSprite = new Sprite();
     this._titleBarSprite.bitmap = new Bitmap(Graphics.width, CY_Scene_MenuBase.TOP_BAR_HEIGHT);
-    this._titleBarSprite.x = 0;
-    this._titleBarSprite.y = lensPadding;
+    this._titleBarSprite.x = 0; // offsets.x; // Negative offset to reach left screen edge
+    this._titleBarSprite.y = offsets.y + this.ui_margin + lensPadding; // Negative offset + lens padding
     
     this.drawTitleBar();
     this.addChild(this._titleBarSprite);
@@ -120,12 +123,13 @@ CY_Scene_File.prototype.createSaveListWindow = function() {
     
     var width = 600;
     var x = Math.floor((Graphics.boxWidth - width) / 2);
-    // Position below title bar with lens padding (only once)
-    var y = offsets.y + lensPadding + CY_Scene_MenuBase.TOP_BAR_HEIGHT + 10;
-    // Height: full height minus top bar, action bar, and lens padding (top only, bottom handled by action bar position)
-    var height = offsets.fullHeight - CY_Scene_MenuBase.TOP_BAR_HEIGHT - CY_Scene_MenuBase.ACTION_BAR_HEIGHT - lensPadding - 30;
+    // Position below title bar (offsets.y is negative, lensPadding pushes down from top)
+    var y = offsets.y + lensPadding + CY_Scene_MenuBase.TOP_BAR_HEIGHT + this.ui_margin * 2;
+    // Height calculation: from current y to action bar position
+    var bottomY = offsets.y + Graphics.height - lensPadding - CY_Scene_MenuBase.ACTION_BAR_HEIGHT;
+    var height = bottomY - y - (this.ui_margin * 2);
     
-    this._saveListWindow = new CY_Window_SaveList(x, y, width, height);
+    this._saveListWindow = new CY_Window_SaveList(x, y + this.ui_margin, width, height);
     this._saveListWindow.setHandler('ok', this.onSaveSlotOk.bind(this));
     this._saveListWindow.setHandler('cancel', this.popScene.bind(this));
     this.makeWindowTransparent(this._saveListWindow);
@@ -139,10 +143,11 @@ CY_Scene_File.prototype.createSaveListWindow = function() {
 CY_Scene_File.prototype.createActionBar = function() {
     var offsets = this.getScreenOffsets();
     var lensPadding = this.getLensPadding();
-    var width = offsets.fullWidth;
+    var width = Graphics.width;
     var height = CY_Scene_MenuBase.ACTION_BAR_HEIGHT;
-    // Position from bottom with lens padding (offsets.y already accounts for box offset)
-    var y = Graphics.boxHeight - height - lensPadding + offsets.y;
+    // Position at bottom of full screen minus lens padding
+    // offsets.y is negative (e.g., -52), Graphics.height is full height (e.g., 720)
+    var y = offsets.y + Graphics.height - height - lensPadding - this.ui_margin * 2;
     
     this._actionBar = new CY_Window_ActionBar();
     this._actionBar.move(offsets.x, y, width, height);

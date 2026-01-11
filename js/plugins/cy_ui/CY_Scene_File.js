@@ -81,13 +81,13 @@ CY_Scene_File.prototype.titleText = function() {
 //-----------------------------------------------------------------------------
 
 CY_Scene_File.prototype.createTitleBar = function() {
-    var offsets = this.getScreenOffsets();
     var lensPadding = this.getLensPadding();
     
+    // Title bar sprite - positioned at screen coordinates (no offset needed for sprites)
     this._titleBarSprite = new Sprite();
-    this._titleBarSprite.bitmap = new Bitmap(offsets.fullWidth, CY_Scene_MenuBase.TOP_BAR_HEIGHT);
-    this._titleBarSprite.x = offsets.x;
-    this._titleBarSprite.y = offsets.y + lensPadding;
+    this._titleBarSprite.bitmap = new Bitmap(Graphics.width, CY_Scene_MenuBase.TOP_BAR_HEIGHT);
+    this._titleBarSprite.x = 0;
+    this._titleBarSprite.y = lensPadding;
     
     this.drawTitleBar();
     this.addChild(this._titleBarSprite);
@@ -118,10 +118,12 @@ CY_Scene_File.prototype.createSaveListWindow = function() {
     var offsets = this.getScreenOffsets();
     var lensPadding = this.getLensPadding();
     
-    var x = Math.floor((Graphics.boxWidth - 600) / 2);
-    var y = offsets.y + lensPadding + CY_Scene_MenuBase.TOP_BAR_HEIGHT + 10;
     var width = 600;
-    var height = offsets.fullHeight - CY_Scene_MenuBase.TOP_BAR_HEIGHT - CY_Scene_MenuBase.ACTION_BAR_HEIGHT - (lensPadding * 2) - 20;
+    var x = Math.floor((Graphics.boxWidth - width) / 2);
+    // Position below title bar with lens padding (only once)
+    var y = offsets.y + lensPadding + CY_Scene_MenuBase.TOP_BAR_HEIGHT + 10;
+    // Height: full height minus top bar, action bar, and lens padding (top only, bottom handled by action bar position)
+    var height = offsets.fullHeight - CY_Scene_MenuBase.TOP_BAR_HEIGHT - CY_Scene_MenuBase.ACTION_BAR_HEIGHT - lensPadding - 30;
     
     this._saveListWindow = new CY_Window_SaveList(x, y, width, height);
     this._saveListWindow.setHandler('ok', this.onSaveSlotOk.bind(this));
@@ -139,7 +141,8 @@ CY_Scene_File.prototype.createActionBar = function() {
     var lensPadding = this.getLensPadding();
     var width = offsets.fullWidth;
     var height = CY_Scene_MenuBase.ACTION_BAR_HEIGHT;
-    var y = offsets.fullHeight - height - lensPadding + offsets.y;
+    // Position from bottom with lens padding (offsets.y already accounts for box offset)
+    var y = Graphics.boxHeight - height - lensPadding + offsets.y;
     
     this._actionBar = new CY_Window_ActionBar();
     this._actionBar.move(offsets.x, y, width, height);

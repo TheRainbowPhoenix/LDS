@@ -34,7 +34,7 @@ CY_Window_SaveList.prototype.constructor = CY_Window_SaveList;
 // Constants
 //-----------------------------------------------------------------------------
 
-CY_Window_SaveList.SLOT_HEIGHT = 72;
+CY_Window_SaveList.SLOT_HEIGHT = 80; // Increased for party faces
 CY_Window_SaveList.MAX_SAVES = 20;
 CY_Window_SaveList.BORDER_COLOR = '#351218';
 CY_Window_SaveList.BORDER_COLOR_SELECTED = '#5CF5FA'; // Cyan
@@ -95,7 +95,7 @@ CY_Window_SaveList.prototype.drawSaveSlotBackground = function(rect, isSelected)
     var x = rect.x + 2;
     var y = rect.y + 2;
     var w = rect.width - 4;
-    var h = rect.height - 6;
+    var h = rect.height - 4;
     var cutSize = 10;
     var borderWidth = 2;
     
@@ -111,43 +111,51 @@ CY_Window_SaveList.prototype.drawSaveSlotBackground = function(rect, isSelected)
 
 CY_Window_SaveList.prototype.drawSaveSlotContent = function(index, info, rect) {
     var x = rect.x + 12;
-    var y = rect.y + 8;
+    var y = rect.y + 10;
     var w = rect.width - 24;
+    var contentHeight = rect.height - 16;
     
-    // Slot number
-    this.contents.fontSize = 18;
+    // Slot number (top left)
+    this.contents.fontSize = 16;
     this.changeTextColor(CY_System.Colors.cyan);
-    this.drawText('SLOT ' + (index + 1).toString().padStart(2, '0'), x, y, 100, 'left');
+    this.drawText('SLOT ' + (index + 1).toString().padStart(2, '0'), x, y, 80, 'left');
     
     if (info) {
         // Has save data
-        this.changeTextColor(CY_System.Colors.white);
         
-        // Playtime (top right)
+        // Playtime (top right, same line as slot)
+        this.changeTextColor(CY_System.Colors.white);
+        this.contents.fontSize = 14;
         if (info.playtime) {
             this.drawText(info.playtime, x, y, w, 'right');
         }
         
-        // Character info / location (second line)
-        var y2 = y + 24;
-        this.contents.fontSize = 16;
-        this.changeTextColor(CY_System.Colors.inactiveText);
-        
-        if (info.title) {
-            this.drawText(info.title, x, y2, w, 'left');
+        // Party faces in the center
+        var faceSize = 48;
+        var faceY = y + 2;
+        var faceStartX = x + 90;
+        if (info.faces) {
+            for (var i = 0; i < info.faces.length && i < 4; i++) {
+                var faceData = info.faces[i];
+                if (faceData[0]) {
+                    this.drawFace(faceData[0], faceData[1], faceStartX + i * (faceSize + 4), faceY, faceSize, faceSize);
+                }
+            }
         }
         
         // Timestamp (bottom right)
+        this.contents.fontSize = 12;
+        this.changeTextColor(CY_System.Colors.inactiveText);
         if (info.timestamp) {
             var date = new Date(info.timestamp);
             var dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
-            this.drawText(dateStr, x, y2 + 18, w, 'right');
+            this.drawText(dateStr, x, y + contentHeight - 16, w, 'right');
         }
     } else {
         // Empty slot
-        this.contents.fontSize = 16;
+        this.contents.fontSize = 14;
         this.changeTextColor(CY_System.Colors.inactiveText);
-        this.drawText('- Empty -', x + 100, y + 12, w - 100, 'left');
+        this.drawText('- Empty -', x + 90, y + 20, w - 90, 'left');
     }
     
     this.resetFontSettings();
@@ -182,7 +190,7 @@ CY_Window_SaveList.prototype.refreshHighlight = function(w, h) {
         2, 
         2, 
         w - 4, 
-        h - 6, 
+        h - 4, 
         'rgba(92, 245, 250, 0.05)', 
         10
     );

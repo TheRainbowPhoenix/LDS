@@ -1,0 +1,54 @@
+name: CI Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x
+
+      - name: Build game
+        run: deno task build
+
+      - name: Copy game files
+        run: deno task copy
+
+      - name: Checkout assets repository
+        uses: actions/checkout@v4
+        with:
+          repository: RyanBram/ryanbram.github.io
+          path: ./.assets
+          sparse-checkout: |
+            RPGMV-Ace/img
+            RPGMV-Ace/audio
+
+      - name: Copy assets
+        run: |
+          cp -r ./.assets/RPGMV-Ace/img ./game/
+          cp -r ./.assets/RPGMV-Ace/audio ./game/
+
+      - name: Zip game folder
+        run: |
+          zip -r game.zip ./game
+          mv game.zip ./game/
+
+      - name: Deploy to GitHub Pages
+        if: github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./game

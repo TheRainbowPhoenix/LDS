@@ -42,6 +42,17 @@ Scene_PhaserTest.prototype.runPhaserLogic = function() {
             bmd.ctx.fillStyle = '#00FF00'; // Green box
             bmd.ctx.fillRect(0,0,64,64);
             
+            // Keyboard input
+            this.cursors = game.input.keyboard.createCursorKeys();
+
+            // Optional WASD support
+            this.wasd = {
+                up: game.input.keyboard.addKey(Phaser.Keyboard.W),
+                down: game.input.keyboard.addKey(Phaser.Keyboard.S),
+                left: game.input.keyboard.addKey(Phaser.Keyboard.A),
+                right: game.input.keyboard.addKey(Phaser.Keyboard.D),
+            };
+
             // Start Physics
             game.physics.startSystem(Phaser.Physics.ARCADE);
             
@@ -62,6 +73,33 @@ Scene_PhaserTest.prototype.runPhaserLogic = function() {
 
         update: function(game) {
             // Rotate the box
+            const speed = 200;
+
+            // Stop previous velocity
+            this.box.body.velocity.x = 0;
+
+            // Arrow keys
+            if (this.cursors.left.isDown) {
+                this.box.body.velocity.x = -speed;
+            }
+            else if (this.cursors.right.isDown) {
+                this.box.body.velocity.x = speed;
+            }
+
+            // WASD (optional)
+            if (this.wasd.left.isDown) {
+                this.box.body.velocity.x = -speed;
+            }
+            else if (this.wasd.right.isDown) {
+                this.box.body.velocity.x = speed;
+            }
+
+            // Jump (up arrow or W)
+            if ((this.cursors.up.isDown || this.wasd.up.isDown) && this.box.body.touching.down) {
+                this.box.body.velocity.y = -350;
+            }
+
+            // Rotate for fun
             this.box.rotation += 0.01;
         }
     };

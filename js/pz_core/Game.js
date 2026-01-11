@@ -1208,7 +1208,7 @@ Phaser.Game.prototype = {
      */
     updateRender: function ()
     {
-        if (this.lockRender || this.renderType === Phaser.HEADLESS)
+        if (this.lockRender  || this.renderType === Phaser.HEADLESS)
         {
             return;
         }
@@ -1221,7 +1221,7 @@ Phaser.Game.prototype = {
         this.state.render();
 
         this.plugins.postRender();
-        this.renderer.postRender();
+        // this.renderer.postRender();
     },
 
     /**

@@ -103,10 +103,15 @@ Phaser.Component.Crop.prototype = {
         var cw = Math.min(this._frame.right, this._crop.right) - cx;
         var ch = Math.min(this._frame.bottom, this._crop.bottom) - cy;
 
-        this.texture.crop.x = cx;
-        this.texture.crop.y = cy;
-        this.texture.crop.width = cw;
-        this.texture.crop.height = ch;
+        const base = this.texture.baseTexture;
+        const rect = new PIXI.Rectangle(cx, cy, cw, ch);
+
+        this.texture = new PIXI.Texture(base, rect);
+
+        // this.texture.crop.x = cx;
+        // this.texture.crop.y = cy;
+        // this.texture.crop.width = cw;
+        // this.texture.crop.height = ch;
 
         this.texture.frame.width = Math.min(cw, this.cropRect.width);
         this.texture.frame.height = Math.min(ch, this.cropRect.height);
@@ -114,7 +119,8 @@ Phaser.Component.Crop.prototype = {
         this.texture.width = this.texture.frame.width;
         this.texture.height = this.texture.frame.height;
 
-        this.texture._updateUvs();
+        // this.texture._updateUvs();
+        this.texture.updateUvs();
 
         if (this.tint !== 0xffffff && (oldX !== cx || oldY !== cy || oldW !== cw || oldH !== ch))
         {

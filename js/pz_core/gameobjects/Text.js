@@ -58,7 +58,8 @@ Phaser.Text = function (game, x, y, text, style)
      */
     this.canvas = Phaser.CanvasPool.create(this);
 
-    Phaser.Sprite.call(this, game, x, y, PIXI.Texture.fromCanvas(this.canvas));
+    // Phaser.Sprite.call(this, game, x, y, PIXI.Texture.fromCanvas(this.canvas));
+    Phaser.Sprite.call(this, game, x, y, PIXI.Texture.from(this.canvas));
 
     /**
      * @property {number} type - The const type of this object.
@@ -1449,34 +1450,57 @@ Phaser.Text.prototype.setTextBounds = function (x, y, width, height)
  */
 Phaser.Text.prototype.updateTexture = function ()
 {
-    var base = this.texture.baseTexture;
-    var crop = this.texture.crop;
-    var frame = this.texture.frame;
+    const w = this.canvas.width;
+    const h = this.canvas.height;
 
-    var w = this.canvas.width;
-    var h = this.canvas.height;
+    // Can't render something with a zero sized dimension
+    this.renderable = (w !== 0 && h !== 0);
 
-    base.width = w;
-    base.height = h;
-
-    crop.width = w;
-    crop.height = h;
-
-    frame.width = w;
-    frame.height = h;
-
-    this.texture.width = w;
-    this.texture.height = h;
-
+    // Keep Phaser's cached width/height fields if you rely on them
     this._width = w;
     this._height = h;
 
+    // ---- Update texture sizing (Pixi v7) ----
+    // If you created the texture from the canvas via PIXI.Texture.from(canvas),
+    // the underlying source knows the canvas. We still need to update the frame/orig.
+    const tex = this.texture;
+
+    // Ensure frame/orig match the new canvas size
+    // (frame is the region used from the base/source; orig is "original" untrimmed size)
+    tex.frame.x = 0;
+    tex.frame.y = 0;
+    tex.frame.width = w;
+    tex.frame.height = h;
+
+    tex.orig.x = 0;
+    tex.orig.y = 0;
+    tex.orig.width = w;
+    tex.orig.height = h;
+
+    tex.updateUvs();
+
+    // ---- Notify Pixi that canvas pixels changed ----
+    // Depending on your Pixi 7 packaging, ONE of these will exist:
+    if (tex.source && tex.source.update)
+    {
+        tex.source.update();
+    }
+    else if (tex.baseTexture && tex.baseTexture.update)
+    {
+        tex.baseTexture.update();
+    }
+    else if (tex.baseTexture && tex.baseTexture.resource && tex.baseTexture.resource.update)
+    {
+        tex.baseTexture.resource.update();
+    }
+
+    // ---- Phaser-specific pivot / bounds alignment (keep your logic) ----
     if (this.textBounds)
     {
-        var x = this.textBounds.x;
-        var y = this.textBounds.y;
+        let x = this.textBounds.x;
+        let y = this.textBounds.y;
 
-        //  Align the canvas based on the bounds
+        // Align the canvas based on the bounds
         if (this.style.boundsAlignH === 'right')
         {
             x += this.textBounds.width - this.canvas.width / this.resolution;
@@ -1499,13 +1523,70 @@ Phaser.Text.prototype.updateTexture = function ()
         this.pivot.y = -y;
     }
 
-    //  Can't render something with a zero sized dimension
-    this.renderable = (w !== 0 && h !== 0);
-
-    this.texture.requiresReTint = true;
-
-    this.texture.baseTexture.dirty();
+    // Phaser CE used this for tint-cache invalidation.
+    // In Pixi 7 you generally don't need it, but if your pipeline depends on it:
+    tex._updateID++; // cheap "something changed" bump (optional)
 };
+
+// Phaser.Text.prototype.updateTexture = function ()
+// {
+//     var base = this.texture.baseTexture;
+//     var crop = this.texture.crop;
+//     var frame = this.texture.frame;
+
+//     var w = this.canvas.width;
+//     var h = this.canvas.height;
+
+//     base.width = w;
+//     base.height = h;
+
+//     crop.width = w;
+//     crop.height = h;
+
+//     frame.width = w;
+//     frame.height = h;
+
+//     this.texture.width = w;
+//     this.texture.height = h;
+
+//     this._width = w;
+//     this._height = h;
+
+//     if (this.textBounds)
+//     {
+//         var x = this.textBounds.x;
+//         var y = this.textBounds.y;
+
+//         //  Align the canvas based on the bounds
+//         if (this.style.boundsAlignH === 'right')
+//         {
+//             x += this.textBounds.width - this.canvas.width / this.resolution;
+//         }
+//         else if (this.style.boundsAlignH === 'center')
+//         {
+//             x += this.textBounds.halfWidth - (this.canvas.width / this.resolution / 2);
+//         }
+
+//         if (this.style.boundsAlignV === 'bottom')
+//         {
+//             y += this.textBounds.height - this.canvas.height / this.resolution;
+//         }
+//         else if (this.style.boundsAlignV === 'middle')
+//         {
+//             y += this.textBounds.halfHeight - (this.canvas.height / this.resolution / 2);
+//         }
+
+//         this.pivot.x = -x;
+//         this.pivot.y = -y;
+//     }
+
+//     //  Can't render something with a zero sized dimension
+//     this.renderable = (w !== 0 && h !== 0);
+
+//     this.texture.requiresReTint = true;
+
+//     this.texture.baseTexture.dirty();
+// };
 
 /**
  * Renders the object using the WebGL renderer

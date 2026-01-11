@@ -320,17 +320,17 @@ Phaser.Component.Core.prototype = {
         // This can't loop in reverse, we need the renderOrderID to be in sequence
         var i = 0;
 
-        while (i < this.children.length)
-        {
-            var child = this.children[i];
+        // while (i < this.children.length)
+        // {
+        //     var child = this.children[i];
 
-            child.preUpdate();
+        //     child.preUpdate && child.preUpdate();
 
-            if (this === child.parent)
-            {
-                i++;
-            }
-        }
+        //     if (this === child.parent)
+        //     {
+        //         i++;
+        //     }
+        // }
     },
 
     /**

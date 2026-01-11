@@ -120,6 +120,10 @@
 	"js/pz_core/gameobjects/TileSprite.js",
     "js/pz_core/gameobjects/Video.js",
 
+    "js/pz_core/physics/arcade/World.js",
+    "js/pz_core/physics/arcade/Body.js",
+    "js/pz_core/physics/arcade/TilemapCollision.js",
+
     "js/pz_core/animation/Animation.js",
     "js/pz_core/animation/creature/gl-matrix.js",
     "js/pz_core/animation/creature/CreatureMeshBone.js",

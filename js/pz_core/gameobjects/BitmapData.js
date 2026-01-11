@@ -67,7 +67,7 @@ Phaser.BitmapData = function (game, key, width, height, skipPool)
     /**
      * @property {string} smoothProperty - The context property needed for smoothing this Canvas.
      */
-    this.smoothProperty = (game.renderType === Phaser.CANVAS) ? game.renderer.renderSession.smoothProperty : Phaser.Canvas.getSmoothingPrefix(this.context);
+    this.smoothProperty = null; // (game.renderType === Phaser.CANVAS) ? game.renderer.renderSession.smoothProperty : Phaser.Canvas.getSmoothingPrefix(this.context);
 
     /**
      * @property {ImageData} imageData - The context image data.

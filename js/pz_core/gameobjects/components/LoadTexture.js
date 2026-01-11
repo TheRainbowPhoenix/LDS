@@ -75,13 +75,15 @@ Phaser.Component.LoadTexture.prototype = {
         if (Phaser.RenderTexture && key instanceof Phaser.RenderTexture)
         {
             this.key = key.key;
-            this.setTexture(key);
+            this.texture = key;
+            // this.setTexture(key);
         }
         else if (Phaser.BitmapData && key instanceof Phaser.BitmapData)
         {
             this.customRender = true;
 
-            this.setTexture(key.texture);
+            // this.setTexture(key.texture);
+            this.texture = key.texture;
 
             if (cache.hasFrameData(key.key, Phaser.Cache.BITMAPDATA))
             {
@@ -98,7 +100,8 @@ Phaser.Component.LoadTexture.prototype = {
 
             //  This works from a reference, which probably isn't what we need here
             var valid = key.texture.valid;
-            this.setTexture(key.texture);
+            // this.setTexture(key.texture);
+            this.texture = key.texture;
             this.setFrame(key.texture.frame.clone());
             key.onChangeSource.add(this.resizeFrame, this);
             this.texture.valid = valid;
@@ -106,21 +109,24 @@ Phaser.Component.LoadTexture.prototype = {
         else if (Phaser.Tilemap && key instanceof Phaser.TilemapLayer)
         {
             // this.customRender = true;
-
-            this.setTexture(PIXI.Texture.fromCanvas(key.canvas));
+            debugger
+            this.setTexture(PIXI.Texture.from(key.canvas));
+            // this.setTexture(PIXI.Texture.fromCanvas(key.canvas));
         }
         else if (key instanceof PIXI.Texture)
         {
             smoothed = key.baseTexture.scaleMode === PIXI.scaleModes.LINEAR;
 
-            this.setTexture(key);
+            // this.setTexture(key);
+            this.texture = key;
         }
         else
         {
             var img = cache.getImage(key, true);
 
             this.key = img.key;
-            this.setTexture(new PIXI.Texture(img.base));
+            // this.setTexture(new PIXI.Texture(img.base));
+            this.texture = new PIXI.Texture(img.base);
 
             if (key === '__default')
             {
@@ -162,10 +168,15 @@ Phaser.Component.LoadTexture.prototype = {
         this.texture.frame.width = frame.width;
         this.texture.frame.height = frame.height;
 
-        this.texture.crop.x = frame.x;
-        this.texture.crop.y = frame.y;
-        this.texture.crop.width = frame.width;
-        this.texture.crop.height = frame.height;
+        const base = this.texture.baseTexture;
+        const rect = new PIXI.Rectangle(frame.x, frame.y, frame.width, frame.height);
+
+        this.texture = new PIXI.Texture(base, rect);
+
+        // this.texture.crop.x = frame.x;
+        // this.texture.crop.y = frame.y;
+        // this.texture.crop.width = frame.width;
+        // this.texture.crop.height = frame.height;
 
         if (frame.trimmed)
         {
@@ -203,7 +214,8 @@ Phaser.Component.LoadTexture.prototype = {
         
         this.texture.requiresReTint = true;
         
-        this.texture._updateUvs();
+        // this.texture._updateUvs();
+        this.texture.updateUvs();
 
         if (this.tilingTexture)
         {

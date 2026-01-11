@@ -43,6 +43,16 @@
  */
 Phaser.Sprite = function (game, x, y, key, frame)
 {
+    var texture = PIXI.Texture.EMPTY;
+    if (typeof key === 'string' && game.cache.checkImageKey(key)) {
+        // Assume basic integration with RMMV ImageManager or Phaser Cache
+        // For now, let's assume standard Pixi texture
+        texture = PIXI.Texture.from(key); 
+    }
+
+    var baseInstance = new PIXI.Sprite(texture);
+    Object.assign(this, baseInstance);
+
     x = x || 0;
     y = y || 0;
     key = key || null;
@@ -60,7 +70,7 @@ Phaser.Sprite = function (game, x, y, key, frame)
      */
     this.physicsType = Phaser.SPRITE;
 
-    PIXI.Sprite.call(this, Phaser.Cache.DEFAULT);
+    // PIXI.Sprite.call(this, Phaser.Cache.DEFAULT);
 
     Phaser.Component.Core.init.call(this, game, x, y, key, frame);
 };

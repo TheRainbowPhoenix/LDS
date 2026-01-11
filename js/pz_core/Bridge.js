@@ -42,6 +42,10 @@ if (!PIXI.blendModesCanvas)
     PIXI.blendModesCanvas = b;
 }
 
+if (!PIXI.scaleModes) {
+    PIXI.scaleModes = {"DEFAULT":0,"LINEAR":0,"NEAREST":1}
+}
+
 // ---------------------------------------------------------------------------
 // 3. Phaser.Sprite Adaptation (Inherit from PIXI.Sprite v7)
 // ---------------------------------------------------------------------------

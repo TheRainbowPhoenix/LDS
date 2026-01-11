@@ -108,7 +108,8 @@ Phaser.RenderTexture = function (game, width, height, key, scaleMode, resolution
 
     this.tempMatrix = new Phaser.Matrix();
 
-    this._updateUvs();
+    // this._updateUvs();
+    this.updateUvs();
 };
 
 Phaser.RenderTexture.prototype = Object.create(PIXI.Texture.prototype);

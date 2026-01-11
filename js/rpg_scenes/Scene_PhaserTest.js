@@ -49,10 +49,10 @@ Scene_PhaserTest.prototype.runPhaserLogic = function() {
             this.box = game.add.sprite(game.world.centerX, 50, bmd);
             this.box.anchor.set(0.5);
             
-            game.physics.arcade.enable(box);
-            box.body.gravity.y = 500;
-            box.body.collideWorldBounds = true;
-            box.body.bounce.set(0.7);
+            game.physics.arcade.enable(this.box);
+            this.box.body.gravity.y = 500;
+            this.box.body.collideWorldBounds = true;
+            this.box.body.bounce.set(0.7);
             
             // Add some text
             var style = { font: "bold 32px Arial", fill: "#fff", boundsAlignH: "center", boundsAlignV: "middle" };

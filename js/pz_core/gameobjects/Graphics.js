@@ -65,7 +65,14 @@ Phaser.Graphics = function (game, x, y)
     this.emit = this._baseInstance.emit
     this.worldTransform = this._baseInstance.worldTransform
     this.updateTransform = this._baseInstance.updateTransform
-    this.render = this._renderCanvas // _renderWebGL // _renderCanvas // TODO: if webgl : _renderWebGL
+
+    this._pixiGraphics = new PIXI.Graphics();
+    this._baseInstance.addChild(this._pixiGraphics);
+    this.render = this._renderPixi7;
+    this._renderWebGL = this._renderPixi7;
+    this._renderCanvas = this._renderPixi7;
+
+    // this.render = this._renderWebGL // _renderWebGL // _renderCanvas // TODO: if webgl : _renderWebGL
 
     /**
      * @property {number} type - The const type of this object.
@@ -219,6 +226,10 @@ Phaser.Graphics = function (game, x, y)
      */
     this.cachedSpriteDirty = false;
 
+    this.eventMode = 'none';           // 'none' | 'passive' | 'auto' | 'static' | 'dynamic'
+    this.interactiveChildren = true;   // default true for containers
+
+
     Phaser.Component.Core.init.call(this, game, x, y, '', null);
 };
 
@@ -243,6 +254,12 @@ Phaser.Graphics.prototype.preUpdatePhysics = Phaser.Component.PhysicsBody.preUpd
 Phaser.Graphics.prototype.preUpdateLifeSpan = Phaser.Component.LifeSpan.preUpdate;
 Phaser.Graphics.prototype.preUpdateInWorld = Phaser.Component.InWorld.preUpdate;
 Phaser.Graphics.prototype.preUpdateCore = Phaser.Component.Core.preUpdate;
+
+Phaser.Graphics.prototype.isInteractive = function ()
+{
+    // interactive if eventMode isn't 'none'
+    return this.eventMode && this.eventMode !== 'none';
+};
 
 /**
  * Automatically called by World.preUpdate.
@@ -275,10 +292,10 @@ Phaser.Graphics.prototype.postUpdate = function ()
         this._boundsDirty = false;
     }
 
-    for (var i = 0; i < this.children.length; i++)
-    {
-        this.children[i].postUpdate();
-    }
+    // for (var i = 0; i < this.children.length; i++)
+    // {
+    //     this.children[i].postUpdate();
+    // }
 };
 
 /**
@@ -920,31 +937,149 @@ Phaser.Graphics.prototype.clear = function ()
  * @param [padding=0] {Number} Add optional extra padding to the generated texture (default 0)
  * @return {Texture} a texture of the graphics object
  */
-Phaser.Graphics.prototype.generateTexture = function (resolution, scaleMode, padding)
+Phaser.Graphics.prototype.generateTexture = function (resolution = 1)
 {
-    if (resolution === undefined) { resolution = 1; }
-    if (scaleMode === undefined) { scaleMode = PIXI.scaleModes.DEFAULT; }
-    if (padding === undefined) { padding = 0; }
+    if (this.dirty)
+    {
+        this._syncToPixi7Graphics();
+        this.dirty = false;
+    }
 
-    var bounds = this.getBounds();
+    // adapt this to wherever your renderer lives (RPG Maker's Graphics._renderer)
+    const renderer = Graphics._renderer || this.game.renderer;
 
-    bounds.width += padding;
-    bounds.height += padding;
-
-    var canvasBuffer = new PIXI.CanvasBuffer(bounds.width * resolution, bounds.height * resolution);
-
-    var texture = PIXI.Texture.fromCanvas(canvasBuffer.canvas, scaleMode);
-
-    texture.baseTexture.resolution = resolution;
-
-    canvasBuffer.context.scale(resolution, resolution);
-
-    canvasBuffer.context.translate(-bounds.x, -bounds.y);
-
-    PIXI.CanvasGraphics.renderGraphics(this, canvasBuffer.context);
-
-    return texture;
+    return renderer.generateTexture(this._pixiGraphics, { resolution });
 };
+
+// Phaser.Graphics.prototype.generateTexture = function (resolution, scaleMode, padding)
+// {
+//     if (resolution === undefined) { resolution = 1; }
+//     if (scaleMode === undefined) { scaleMode = PIXI.scaleModes.DEFAULT; }
+//     if (padding === undefined) { padding = 0; }
+
+//     var bounds = this.getBounds();
+
+//     bounds.width += padding;
+//     bounds.height += padding;
+
+//     var canvasBuffer = new PIXI.CanvasBuffer(bounds.width * resolution, bounds.height * resolution);
+
+//     var texture = PIXI.Texture.from(canvasBuffer.canvas, scaleMode);
+    // var texture = PIXI.Texture.fromCanvas(canvasBuffer.canvas, scaleMode);
+
+//     texture.baseTexture.resolution = resolution;
+
+//     canvasBuffer.context.scale(resolution, resolution);
+
+//     canvasBuffer.context.translate(-bounds.x, -bounds.y);
+
+//     PIXI.CanvasGraphics.renderGraphics(this, canvasBuffer.context);
+
+//     return texture;
+// };
+
+Phaser.Graphics.prototype._renderPixi7 = function (renderer)
+{
+    if (!this.visible || this.alpha === 0 || this.isMask === true)
+    {
+        return;
+    }
+
+    // Update Pixi graphics properties
+    const g = this._pixiGraphics;
+
+    g.alpha = this.alpha;
+    g.tint = this.tint;
+    g.blendMode = this.blendMode;
+
+    // Phaser mask/filters: easiest bridge is to apply them to g
+    g.mask = this._mask || null;
+    g.filters = this._filters || null;
+
+    // Sync draw commands when dirty
+    if (this.dirty)
+    {
+        this._syncToPixi7Graphics();
+        this.dirty = false;
+    }
+
+    // Render the container (which contains g + children)
+    this._baseInstance.render(renderer);
+};
+
+Phaser.Graphics.prototype._syncToPixi7Graphics = function ()
+{
+    const g = this._pixiGraphics;
+    g.clear();
+
+    const list = this.graphicsData;
+
+    for (let i = 0; i < list.length; i++)
+    {
+        const data = list[i];
+
+        // line
+        if (data.lineWidth > 0)
+        {
+            g.lineStyle({
+                width: data.lineWidth,
+                color: data.lineColor,
+                alpha: data.lineAlpha,
+            });
+        }
+        else
+        {
+            g.lineStyle({ width: 0 });
+        }
+
+        // fill
+        if (data.fill)
+        {
+            g.beginFill(data.fillColor, data.fillAlpha);
+        }
+
+        const shape = data.shape;
+        const type = data.type;
+
+        if (type === Phaser.RECTANGLE)
+        {
+            g.drawRect(shape.x, shape.y, shape.width, shape.height);
+        }
+        else if (type === Phaser.ROUNDEDRECTANGLE)
+        {
+            g.drawRoundedRect(shape.x, shape.y, shape.width, shape.height, shape.radius);
+        }
+        else if (type === Phaser.CIRCLE)
+        {
+            g.drawCircle(shape.x, shape.y, shape.radius);
+        }
+        else if (type === Phaser.ELLIPSE)
+        {
+            // Your port stores ellipse as {x,y,width,height} (half sizes). Adjust if needed.
+            g.drawEllipse(shape.x, shape.y, shape.width, shape.height);
+        }
+        else if (type === Phaser.POLYGON)
+        {
+            // Phaser polygons are flattened [x0,y0,x1,y1,...]
+            g.drawPolygon(shape.points);
+        }
+        else
+        {
+            // Fallback: try polygon
+            if (shape && shape.points)
+            {
+                g.drawPolygon(shape.points);
+            }
+        }
+
+        if (data.fill)
+        {
+            g.endFill();
+        }
+    }
+};
+
+
 
 /**
  * Renders the object using the WebGL renderer
@@ -1430,7 +1565,8 @@ Phaser.Graphics.prototype._generateCachedSprite = function ()
     if (!this._cachedSprite)
     {
         var canvasBuffer = new PIXI.CanvasBuffer(bounds.width, bounds.height);
-        var texture = PIXI.Texture.fromCanvas(canvasBuffer.canvas);
+        // var texture = PIXI.Texture.fromCanvas(canvasBuffer.canvas);
+        var texture = PIXI.Texture.from(canvasBuffer.canvas);
 
         this._cachedSprite = new PIXI.Sprite(texture);
         this._cachedSprite.buffer = canvasBuffer;
@@ -1547,26 +1683,30 @@ Phaser.Graphics.prototype.drawShape = function (shape)
  * @private
  */
 Object.defineProperty(Phaser.Graphics.prototype, 'cacheAsBitmap', {
+    
+    get() { return this._pixiGraphics.cacheAsBitmap; },
+    set(v) { this._pixiGraphics.cacheAsBitmap = !!v; }
 
-    get: function ()
-    {
-        return this._cacheAsBitmap;
-    },
 
-    set: function (value)
-    {
-        this._cacheAsBitmap = value;
+    // get: function ()
+    // {
+    //     return this._cacheAsBitmap;
+    // },
 
-        if (this._cacheAsBitmap)
-        {
-            this._generateCachedSprite();
-        }
-        else
-        {
-            this.destroyCachedSprite();
-        }
+    // set: function (value)
+    // {
+    //     this._cacheAsBitmap = value;
 
-        this.dirty = true;
-        this.webGLDirty = true;
-    }
+    //     if (this._cacheAsBitmap)
+    //     {
+    //         this._generateCachedSprite();
+    //     }
+    //     else
+    //     {
+    //         this.destroyCachedSprite();
+    //     }
+
+    //     this.dirty = true;
+    //     this.webGLDirty = true;
+    // }
 });

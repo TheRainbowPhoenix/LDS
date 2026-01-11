@@ -1,0 +1,17 @@
+[
+    "js/plugins/cy_ui/_header.js",
+    "js/plugins/cy_ui/CY_System.js",
+    "js/plugins/cy_ui/CY_Window_Base.js",
+    "js/plugins/cy_ui/CY_Window_Selectable.js",
+    "js/plugins/cy_ui/CY_Window_TitleCommand.js",
+    "js/plugins/cy_ui/CY_Scene_Title.js",
+    "js/plugins/cy_ui/CY_Window_OptionsList.js",
+    "js/plugins/cy_ui/CY_Scene_Options.js",
+    "js/plugins/cy_ui/CY_Window_SaveList.js",
+    "js/plugins/cy_ui/CY_Scene_File.js",
+    "js/plugins/cy_ui/CY_Window_TabBar.js",
+    "js/plugins/cy_ui/CY_Window_ActionBar.js",
+    "js/plugins/cy_ui/CY_Scene_MenuBase.js",
+    "js/plugins/cy_ui/CY_Main.js",
+    "js/plugins/cy_ui/_footer.js"
+]

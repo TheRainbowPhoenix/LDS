@@ -393,6 +393,7 @@ CY_Scene_Title.prototype.createCommandWindow = function() {
     this._commandWindow.setHandler('options', this.commandOptions.bind(this));
     this._commandWindow.setHandler('credits', this.commandCredits.bind(this));
     this._commandWindow.setHandler('phaser',  this.commandPhaser.bind(this));
+    this._commandWindow.setHandler('spine',  this.commandSpine.bind(this));
     
     this.addChild(this._commandWindow);
 };
@@ -467,6 +468,12 @@ CY_Scene_Title.prototype.commandPhaser = function() {
     this._commandWindow.close();
     this.fadeOutAll();
     SceneManager.goto(Scene_PhaserTest);
+};
+
+CY_Scene_Title.prototype.commandSpine = function() {
+    this._commandWindow.close();
+    this.fadeOutAll();
+    SceneManager.goto(Scene_SpineTest);
 };
 
 //-----------------------------------------------------------------------------

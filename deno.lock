@@ -2383,6 +2383,7 @@
     ],
     "packageJson": {
       "dependencies": [
+        "npm:@pixi-spine/all-3.8@^4.0.6",
         "npm:bestzip@^1.1.3",
         "npm:concat-with-sourcemaps@^1.0.4",
         "npm:cpx@^1.5.0",

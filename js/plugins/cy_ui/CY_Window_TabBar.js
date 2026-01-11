@@ -48,10 +48,26 @@ CY_Window_TabBar.prototype.constructor = CY_Window_TabBar;
 CY_Window_TabBar.prototype.initialize = function(tabs) {
     this._tabs = tabs || ['SOUND', 'CONTROLS', 'GAMEPLAY'];
     var width = Graphics.width; // Full screen width
-    var height = this.fittingHeight(1);
+    var height = 48; // Fixed height for tab bar
     CY_Window_Selectable.prototype.initialize.call(this, 0, 0, width, height);
     this.refresh();
     this.select(0);
+};
+
+/**
+ * Override standardPadding for minimal padding in tab bar.
+ * @returns {number} Padding value
+ */
+CY_Window_TabBar.prototype.standardPadding = function() {
+    return 4;
+};
+
+/**
+ * Override textPadding for minimal text padding.
+ * @returns {number} Text padding value
+ */
+CY_Window_TabBar.prototype.textPadding = function() {
+    return 2;
 };
 
 //-----------------------------------------------------------------------------

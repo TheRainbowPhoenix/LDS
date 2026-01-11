@@ -596,3 +596,181 @@ CY_Window_OptionsList.prototype.refreshHighlight = function(w, h) {
     );
 };
 
+//-----------------------------------------------------------------------------
+// Mouse/Touch Click Handling for Controls
+//-----------------------------------------------------------------------------
+
+/**
+ * Override processTouch to handle clicks on toggle buttons and sliders.
+ */
+CY_Window_OptionsList.prototype.processTouch = function() {
+    if (this.isOpenAndActive()) {
+        if (TouchInput.isTriggered() && this.isTouchedInsideFrame()) {
+            this._touching = true;
+            this.onTouch(true);
+        } else if (TouchInput.isCancelled()) {
+            if (this.isCancelEnabled()) {
+                this.processCancel();
+            }
+        }
+        if (this._touching) {
+            if (TouchInput.isPressed()) {
+                this.onTouch(false);
+            } else {
+                this._touching = false;
+            }
+        }
+    } else {
+        this._touching = false;
+    }
+};
+
+/**
+ * Handle touch/click on the options list.
+ * Detects clicks on toggle buttons (OFF/ON) and slider tracks.
+ * @param {boolean} triggered - Whether this is a new touch
+ */
+CY_Window_OptionsList.prototype.onTouch = function(triggered) {
+    var lastIndex = this.index();
+    var x = this.canvasToLocalX(TouchInput.x);
+    var y = this.canvasToLocalY(TouchInput.y);
+    var hitIndex = this.hitTest(x, y);
+    
+    if (hitIndex >= 0) {
+        if (hitIndex !== this.index()) {
+            // Skip headers when clicking
+            var opt = this.option(hitIndex);
+            if (opt && opt.type !== CY_Window_OptionsList.TYPE_HEADER) {
+                this.select(hitIndex);
+            }
+        }
+        
+        if (triggered) {
+            // Check if we clicked on a control element
+            this.processControlClick(hitIndex, x, y);
+        }
+    }
+};
+
+/**
+ * Process a click on a control element (toggle button or slider).
+ * @param {number} index - The option index that was clicked
+ * @param {number} x - Local X coordinate of the click
+ * @param {number} y - Local Y coordinate of the click
+ */
+CY_Window_OptionsList.prototype.processControlClick = function(index, x, y) {
+    var opt = this.option(index);
+    if (!opt) return;
+    
+    var rect = this.itemRectForText(index);
+    
+    switch (opt.type) {
+        case CY_Window_OptionsList.TYPE_TOGGLE:
+            this.processToggleClick(opt, rect, x);
+            break;
+        case CY_Window_OptionsList.TYPE_SLIDER:
+            this.processSliderClick(opt, rect, x);
+            break;
+        case CY_Window_OptionsList.TYPE_SPINNER:
+            this.processSpinnerClick(opt, rect, x);
+            break;
+        case CY_Window_OptionsList.TYPE_BUTTON:
+            this.processOk();
+            break;
+    }
+};
+
+/**
+ * Process a click on a toggle control.
+ * Clicking OFF button sets value to false, clicking ON button sets value to true.
+ * @param {Object} opt - The option object
+ * @param {Object} rect - The item rectangle
+ * @param {number} x - Local X coordinate of the click
+ */
+CY_Window_OptionsList.prototype.processToggleClick = function(opt, rect, x) {
+    var labelWidth = rect.width * 0.5;
+    var controlX = rect.x + labelWidth;
+    var controlWidth = rect.width * 0.5;
+    var btnWidth = controlWidth / 2 - 4;
+    
+    // Check if click is in the control area (right half)
+    if (x >= controlX) {
+        var relativeX = x - controlX;
+        var currentValue = this.getConfigValue(opt.symbol);
+        
+        // OFF button area (left side of control)
+        if (relativeX < btnWidth) {
+            if (currentValue !== false) {
+                this.setConfigValue(opt.symbol, false);
+                SoundManager.playCursor();
+                this.redrawItem(this.index());
+            }
+        }
+        // ON button area (right side of control, after gap)
+        else if (relativeX >= btnWidth + 8 && relativeX < btnWidth * 2 + 8) {
+            if (currentValue !== true) {
+                this.setConfigValue(opt.symbol, true);
+                SoundManager.playCursor();
+                this.redrawItem(this.index());
+            }
+        }
+    }
+};
+
+/**
+ * Process a click on a slider control.
+ * Clicking on the slider track sets the value based on click position,
+ * or cycles through step values if step is defined.
+ * @param {Object} opt - The option object
+ * @param {Object} rect - The item rectangle
+ * @param {number} x - Local X coordinate of the click
+ */
+CY_Window_OptionsList.prototype.processSliderClick = function(opt, rect, x) {
+    var labelWidth = rect.width * 0.4;
+    var controlX = rect.x + labelWidth;
+    var trackWidth = (rect.width * 0.6) - 60;
+    
+    // Check if click is in the slider track area
+    if (x >= controlX && x < controlX + trackWidth) {
+        var step = opt.step || 20;
+        var currentValue = this.getConfigValue(opt.symbol);
+        
+        // Cycle to next step value
+        var newValue = currentValue + step;
+        if (newValue > 100) {
+            newValue = 0;
+        }
+        
+        this.setConfigValue(opt.symbol, newValue);
+        SoundManager.playCursor();
+        this.redrawItem(this.index());
+    }
+};
+
+/**
+ * Process a click on a spinner control.
+ * Clicking left arrow decreases, clicking right arrow increases.
+ * @param {Object} opt - The option object
+ * @param {Object} rect - The item rectangle
+ * @param {number} x - Local X coordinate of the click
+ */
+CY_Window_OptionsList.prototype.processSpinnerClick = function(opt, rect, x) {
+    var labelWidth = rect.width * 0.4;
+    var controlX = rect.x + labelWidth;
+    var controlWidth = rect.width * 0.6;
+    
+    // Check if click is in the control area
+    if (x >= controlX) {
+        var relativeX = x - controlX;
+        
+        // Left arrow area (first 30px)
+        if (relativeX < 30) {
+            this.changeOptionValue(-1);
+        }
+        // Right arrow area (last 30px)
+        else if (relativeX >= controlWidth - 30) {
+            this.changeOptionValue(1);
+        }
+    }
+};
+

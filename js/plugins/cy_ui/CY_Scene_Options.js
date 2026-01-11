@@ -138,8 +138,9 @@ CY_Scene_Options.prototype.createTabBar = function() {
     this._tabBar.setHandler('ok', this.onTabOk.bind(this));
     this._tabBar.setHandler('cancel', this.popScene.bind(this));
     this._tabBar.opacity = 0; // Transparent window chrome
-    // Hide the custom CY background sprite so gradient shows through
+    // Make the custom CY background fully transparent
     if (this._tabBar._cyBackSprite) {
+        this._tabBar._cyBackSprite.bitmap.clear();
         this._tabBar._cyBackSprite.visible = false;
     }
     this.addWindow(this._tabBar);
@@ -153,14 +154,16 @@ CY_Scene_Options.prototype.createOptionsWindow = function() {
     var maxWidth = CY_Scene_Options.MAX_OPTIONS_WIDTH;
     var width = Math.min(maxWidth, Graphics.boxWidth - 40);
     var x = Math.floor((Graphics.boxWidth - width) / 2); // Centered within boxWidth
-    var y = CY_Scene_Options.TAB_BAR_HEIGHT + offsets.y;
+    // Position below tab bar (tab bar is at offsets.y, add its height)
+    var y = offsets.y + CY_Scene_Options.TAB_BAR_HEIGHT;
     var height = offsets.fullHeight - CY_Scene_Options.TAB_BAR_HEIGHT - CY_Scene_Options.ACTION_BAR_HEIGHT;
 
     this._optionsWindow = new CY_Window_OptionsList(x, y, width, height);
     this._optionsWindow.setHandler('cancel', this.onOptionsCancel.bind(this));
     this._optionsWindow.opacity = 0; // Transparent window chrome
-    // Hide the custom CY background sprite so gradient shows through
+    // Make the custom CY background fully transparent
     if (this._optionsWindow._cyBackSprite) {
+        this._optionsWindow._cyBackSprite.bitmap.clear();
         this._optionsWindow._cyBackSprite.visible = false;
     }
     this.addWindow(this._optionsWindow);
@@ -180,8 +183,9 @@ CY_Scene_Options.prototype.createActionBar = function() {
     this._actionBar = new CY_Window_ActionBar();
     this._actionBar.move(offsets.x, y, width, height);
     this._actionBar.opacity = 0; // Transparent window chrome
-    // Hide the custom CY background sprite so gradient shows through
+    // Make the custom CY background fully transparent
     if (this._actionBar._cyBackSprite) {
+        this._actionBar._cyBackSprite.bitmap.clear();
         this._actionBar._cyBackSprite.visible = false;
     }
     this.updateActionBar();

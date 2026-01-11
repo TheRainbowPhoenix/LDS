@@ -294,6 +294,7 @@ CY_Window_TitleCommand.prototype.makeCommandList = function() {
     this.addCommand('LOAD GAME', 'loadGame', true);
     this.addCommand('SETTINGS', 'options', true);
     this.addCommand('CREDITS', 'credits', true);
+    this.addCommand('PHASER', 'phaser', true);
 };
 
 /**

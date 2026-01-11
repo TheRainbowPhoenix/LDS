@@ -20,6 +20,9 @@ Scene_PhaserTest.prototype.create = function() {
     
     // Phaser should already be init by Scene_Boot
     if (Graphics.phaser && Graphics.phaser.stage) {
+        // Unpause the game and ensure the renderer is active
+        Graphics.phaser.paused = false;
+
         this.runPhaserLogic();
         // Add the Phaser Stage (which is a PIXI.Container) to this Scene
         this.addChild(Graphics.phaser.stage);
@@ -69,6 +72,14 @@ Scene_PhaserTest.prototype.runPhaserLogic = function() {
             var style = { font: "bold 32px Arial", fill: "#fff", boundsAlignH: "center", boundsAlignV: "middle" };
             this.text = game.add.text(0, 0, "Phaser running in RMMV!", style);
             this.text.setTextBounds(0, 100, 800, 100);
+
+            // Add a button to go back to the menu
+            var button = game.add.text(game.world.centerX, game.world.centerY + 100, "Back to Menu", { font: "24px Arial", fill: "#fff", backgroundColor: "#333", padding: 10 });
+            button.anchor.set(0.5);
+            button.inputEnabled = true;
+            button.events.onInputDown.add(function() {
+                SceneManager.pop();
+            });
         },
 
         update: function(game) {
@@ -125,7 +136,8 @@ Scene_PhaserTest.prototype.terminate = function() {
         // Detach the stage so it doesn't get destroyed by RMMV scene cleanup
         // if you want to persist the Phaser state.
         this.removeChild(Graphics.phaser.stage); 
-        // Optional: Pause logic
-        Graphics.phaser.paused = true; 
+
+        // Pause the Phaser game
+        Graphics.phaser.paused = true;
     }
 };

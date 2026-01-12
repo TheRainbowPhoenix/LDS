@@ -207,42 +207,42 @@
   //=============================================================================
 
   function adjustRatio() {
-    const aspectRatio = window.innerWidth / window.innerHeight;
-    let screenWidth;
-    const screenHeight = paramScreenHeight;
+    // const aspectRatio = window.innerWidth / window.innerHeight;
+    // let screenWidth;
+    // const screenHeight = paramScreenHeight;
 
     // The logic is now dynamic for both mobile and desktop
-    screenWidth = Math.round(screenHeight * aspectRatio);
+    // screenWidth = Math.round(screenHeight * aspectRatio);
 
-    // Ensure minimum width is not smaller than the default screen width from parameters
-    if (screenWidth < paramScreenWidth) {
-      screenWidth = paramScreenWidth;
-    }
+    // // Ensure minimum width is not smaller than the default screen width from parameters
+    // if (screenWidth < paramScreenWidth) {
+    //   screenWidth = paramScreenWidth;
+    // }
 
-    let windowWidth = paramWindowWidth;
-    let windowHeight = paramWindowHeight;
+    // let windowWidth = paramWindowWidth;
+    // let windowHeight = paramWindowHeight;
 
-    // Set the new dimensions for SceneManager and Graphics
-    //SceneManager._screenWidth = screenWidth;
-    //SceneManager._screenHeight = screenHeight;
-    SceneManager._boxWidth = windowWidth;
-    SceneManager._boxHeight = windowHeight;
+    // // Set the new dimensions for SceneManager and Graphics
+    // //SceneManager._screenWidth = screenWidth;
+    // //SceneManager._screenHeight = screenHeight;
+    // SceneManager._boxWidth = windowWidth;
+    // SceneManager._boxHeight = windowHeight;
 
-    Graphics.width = screenWidth;
-    Graphics.height = screenHeight;
+    // Graphics.width = screenWidth;
+    // Graphics.height = screenHeight;
 
-    // [FIX] Use the MV-compatible method to resize the renderer
-    if (Graphics._renderer) {
-      Graphics._renderer.resize(screenWidth, screenHeight);
-    }
+    // // [FIX] Use the MV-compatible method to resize the renderer
+    // if (Graphics._renderer) {
+    //   Graphics._renderer.resize(screenWidth, screenHeight);
+    // }
 
-    Graphics._updateAllElements();
+    // Graphics._updateAllElements();
 
-    // [MODIFIKASI] Ganti refresh Scene_Title dengan
-    // pemanggilan Layout Update yang universal
-    if (SceneManager._scene) {
-      SceneManager._scene.requestLayoutUpdate();
-    }
+    // // [MODIFIKASI] Ganti refresh Scene_Title dengan
+    // // pemanggilan Layout Update yang universal
+    // if (SceneManager._scene) {
+    //   SceneManager._scene.requestLayoutUpdate();
+    // }
   }
 
   // Add resize event listener
@@ -255,10 +255,12 @@
   // ImageCache.limit = paramCacheLimit * 1000 * 1000;
 
   // The initial setup is now handled by adjustRatio, but we set a default
-  SceneManager._screenWidth = paramScreenWidth;
-  SceneManager._screenHeight = paramScreenHeight;
-  SceneManager._boxWidth = paramWindowWidth;
-  SceneManager._boxHeight = paramWindowHeight;
+  // SceneManager._screenWidth = paramScreenWidth;
+  // SceneManager._screenHeight = paramScreenHeight;
+  // SceneManager._boxWidth = paramScreenWidth; // paramWindowWidth;
+  // SceneManager._boxHeight = paramScreenHeight; // paramWindowHeight;
+  // Graphics.boxWidth = SceneManager._boxWidth;
+  // Graphics.boxHeight = SceneManager._boxHeight;
 
   //.Graphics.setErrorMessage(paramErrorMessage);
   //.Graphics.setShowErrorDetail(paramShowErrorDetail);
@@ -271,9 +273,9 @@
   };
 
   // 2633 - Make game screen always start in fit mode, can be toggled by F3 (1/1)
-  Graphics._defaultStretchMode = function () {
-    return true;
-  };
+  // Graphics._defaultStretchMode = function () {
+  //   return true;
+  // };
 
   // 3036 - Change Gamepad default button to more common layout
   Input.gamepadMapper = {
@@ -433,9 +435,9 @@
   // [BARU] Fungsi untuk memposisikan ulang WindowLayer (lapisan UI)
   Scene_Base.prototype.updateWindowLayerPosition = function () {
     if (this._windowLayer) {
-      var x = (Graphics.width - Graphics.boxWidth) / 2;
-      var y = (Graphics.height - Graphics.boxHeight) / 2;
-      this._windowLayer.move(x, y);
+      // var x = (Graphics.width - Graphics.boxWidth) / 2;
+      // var y = (Graphics.height - Graphics.boxHeight) / 2;
+      // this._windowLayer.move(x, y);
     }
   };
 

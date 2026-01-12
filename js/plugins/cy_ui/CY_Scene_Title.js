@@ -67,6 +67,7 @@ CY_Scene_Title.prototype.create = function() {
     Scene_Base.prototype.create.call(this);
     this.createBackground();
     this.createSideStripe();
+    this.createSpineDisplay();
     this.createLogo();
     this.createCommandWindow();
 };
@@ -96,6 +97,10 @@ CY_Scene_Title.prototype.update = function() {
     
     // Update CRT shader animation
     this.updateCRTFilter();
+
+    if (this._titleSpine) {
+        this._titleSpine.update(0.016); 
+    }
     
     Scene_Base.prototype.update.call(this);
 };
@@ -345,6 +350,56 @@ CY_Scene_Title.prototype.drawScanlines = function(ctx, width, height) {
     }
     
     ctx.restore();
+};
+
+//-----------------------------------------------------------------------------
+// Spine Character Creation
+//-----------------------------------------------------------------------------
+
+/**
+ * Creates the Spine character if the MpiShowSpine plugin is active and data is loaded.
+ */
+CY_Scene_Title.prototype.createSpineDisplay = function() {
+    // 1. Safety Check: Is MpiShowSpine imported and is the data object ready?
+    if (typeof Makonet === 'undefined' || !Makonet['MpiShowSpine'] || !Makonet['MpiShowSpine'].spineData) {
+        console.error("MpiShowSpine plugin is missing!");
+        return;
+    }
+
+    var spineName = "seele";
+    var animName = "animation";
+
+    // 2. Check if the specific file 'seele' is loaded
+    var spineData = Makonet['MpiShowSpine'].spineData[spineName];
+    
+    if (spineData) {
+        try {
+            // Create the PIXI Spine object directly
+            this._titleSpine = new PIXI.spine.Spine(spineData);
+
+            // Set Coordinates
+            // X = Graphics.width - 500 as requested
+            this._titleSpine.x = Graphics.width - 500;
+            
+            // Y position: Spine origins are usually at the feet. 
+            // We set it to the bottom of the screen (adjust -50 as needed)
+            this._titleSpine.y = Graphics.height - 50; 
+
+            // Set Scale (75% as requested)
+            this._titleSpine.scale.set(0.75, 0.75);
+
+            // Play Animation (Track 0, Name, Loop=True)
+            this._titleSpine.state.setAnimation(0, animName, true);
+
+            // Add to the scene
+            this.addChild(this._titleSpine);
+
+        } catch (e) {
+            console.warn("CY_Scene_Title: Failed to initialize Spine animation.", e);
+        }
+    } else {
+        console.log("CY_Scene_Title: Spine data for '" + spineName + "' not found. Make sure it is in the Plugin Parameters.");
+    }
 };
 
 //-----------------------------------------------------------------------------

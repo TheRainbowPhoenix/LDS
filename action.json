@@ -1,18 +1,2 @@
 [
-  "js/action/core/_header.js",
-  "js/action/core/ACT_Utils.js",
-  "js/action/core/ACT_Vector2.js",
-  "js/action/core/ACT_AABB.js",
-  "js/action/core/ACT_Physics.js",
-  "js/action/core/ACT_Input.js",
-  "js/action/objects/_header.js",
-  "js/action/objects/ACT_Body.js",
-  "js/action/objects/ACT_Entity.js",
-  "js/action/objects/ACT_Bullet.js",
-  "js/action/objects/ACT_World.js",
-  "js/action/sprites/_header.js",
-  "js/action/sprites/Sprite_ACT_Entity.js",
-  "js/action/sprites/Spriteset_Action.js",
-  "js/action/scenes/_header.js",
-  "js/action/scenes/Scene_Action.js"
 ]

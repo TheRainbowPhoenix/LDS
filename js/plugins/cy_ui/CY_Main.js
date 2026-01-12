@@ -3,15 +3,18 @@
 //=============================================================================
 
 
-
+if (typeof globalThis === 'undefined') {
+    var globalThis = window;
+}
 
 const CY_Main = {};
+globalThis.CY_Main = CY_Main;
 
 // let parameters = window.parameters || undefined;
 
 CY_Main.Parameters = {
     enableCyberpunkTitle: parameters ? parameters['enableCyberpunkTitle'] !== 'false' : true,
-    enableCyberpunkOptions: parameters ? parameters['enableCyberpunkOptions'] !== 'false' : false,
+    enableCyberpunkOptions: parameters ? parameters['enableCyberpunkOptions'] === 'true' : false,
     titleLogoX: parameters ?  Number(parameters['titleLogoX'] || 80) : 80,
     titleLogoY: parameters ? Number(parameters['titleLogoY'] || -150) : -150,
     commandWindowX: parameters ? Number(parameters['commandWindowX'] || 80) : 80

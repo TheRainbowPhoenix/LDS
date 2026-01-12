@@ -34,7 +34,7 @@ CY_Scene_MenuBase.prototype.constructor = CY_Scene_MenuBase;
 // Constants
 //-----------------------------------------------------------------------------
 
-CY_Scene_MenuBase.LENS_PADDING = 100; // Padding to compensate for CRT lens distortion
+CY_Scene_MenuBase.LENS_PADDING = 0; // Padding to compensate for CRT lens distortion
 CY_Scene_MenuBase.TOP_BAR_HEIGHT = 48;
 CY_Scene_MenuBase.ACTION_BAR_HEIGHT = 48;
 
@@ -57,12 +57,12 @@ CY_Scene_MenuBase.prototype.create = function() {
 
 CY_Scene_MenuBase.prototype.start = function() {
     Scene_MenuBase.prototype.start.call(this);
-    this.applyCRTFilter();
+    // this.applyCRTFilter();
 };
 
 CY_Scene_MenuBase.prototype.update = function() {
     Scene_MenuBase.prototype.update.call(this);
-    this.updateCRTFilter();
+    // this.updateCRTFilter();
 };
 
 //-----------------------------------------------------------------------------
@@ -111,8 +111,8 @@ CY_Scene_MenuBase.prototype.createGradientBackground = function() {
  */
 CY_Scene_MenuBase.prototype.getScreenOffsets = function() {
     return {
-        x: -Math.floor((Graphics.width - Graphics.boxWidth) / 2),
-        y: -Math.floor((Graphics.height - Graphics.boxHeight) / 2),
+        x: 0, // -Math.floor((Graphics.width - Graphics.boxWidth) / 2),
+        y: 0, // -Math.floor((Graphics.height - Graphics.boxHeight) / 2),
         fullWidth: Graphics.width,
         fullHeight: Graphics.height
     };
@@ -145,7 +145,20 @@ CY_Scene_MenuBase.prototype.makeWindowTransparent = function(window) {
  */
 CY_Scene_MenuBase.prototype.applyCRTFilter = function() {
     if (!PIXI.Filter) return;
+
+    // 1. Explicit Vertex Shader (Required for PIXI 4 stability)
+    var crtVertexShader = `
+        attribute vec2 aVertexPosition;
+        attribute vec2 aTextureCoord;
+        uniform mat3 projectionMatrix;
+        varying vec2 vTextureCoord;
+        void main(void) {
+            gl_Position = vec4((projectionMatrix * vec3(aVertexPosition, 1.0)).xy, 0.0, 1.0);
+            vTextureCoord = aTextureCoord;
+        }
+    `;
     
+    // 2. Fragment Shader (Tweaked for PIXI 4)
     var crtFragmentShader = `
         precision mediump float;
         
@@ -170,19 +183,22 @@ CY_Scene_MenuBase.prototype.applyCRTFilter = function() {
         void main(void) {
             vec2 uv = pincushionDistortion(vTextureCoord, uDistortion);
             
+            // FIX: Return Transparent instead of Solid Black if out of bounds
             if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
-                gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+                gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0); 
                 return;
             }
             
             vec4 color = texture2D(uSampler, uv);
             
+            // Ghosting
             vec2 ghostUV = pincushionDistortion(vTextureCoord + vec2(uGhostOffset, uGhostOffset * 0.6), uDistortion);
             if (ghostUV.x >= 0.0 && ghostUV.x <= 1.0 && ghostUV.y >= 0.0 && ghostUV.y <= 1.0) {
                 vec4 ghost = texture2D(uSampler, ghostUV);
                 color.rgb = color.rgb - ghost.rgb * uGhostOpacity;
             }
             
+            // Edge Noise / Glitch
             float edgeWidth = uEdgeNoiseWidth;
             float leftEdge = smoothstep(0.0, edgeWidth, vTextureCoord.x);
             float rightEdge = smoothstep(0.0, edgeWidth, 1.0 - vTextureCoord.x);
@@ -212,10 +228,12 @@ CY_Scene_MenuBase.prototype.applyCRTFilter = function() {
                 }
             }
             
+            // Scanlines
             float scanline = sin(uv.y * 600.0) * 0.5 + 0.5;
             scanline = pow(scanline, 3.0) * 0.015;
             color.rgb -= scanline;
             
+            // Vignette
             float vignette = 1.0 - dot(vTextureCoord - 0.5, vTextureCoord - 0.5) * 0.3;
             color.rgb *= vignette;
             
@@ -224,7 +242,8 @@ CY_Scene_MenuBase.prototype.applyCRTFilter = function() {
     `;
     
     try {
-        this._crtFilter = new PIXI.Filter(null, crtFragmentShader, {
+        // Pass Vertex shader (1st arg) instead of null
+        this._crtFilter = new PIXI.Filter(crtVertexShader, crtFragmentShader, {
             uTime: 0.0,
             uDistortion: 0.16,
             uGhostOffset: 0.002,
@@ -232,13 +251,17 @@ CY_Scene_MenuBase.prototype.applyCRTFilter = function() {
             uEdgeNoiseWidth: 0.025
         });
         
-        var crtEnabled = ConfigManager.crtShader !== false;
+        // MV Configuration check
+        // Check global ConfigManager or fallback to true
+        var crtEnabled = (typeof ConfigManager.crtShader !== 'undefined') ? ConfigManager.crtShader : true;
+        
         if (crtEnabled) {
             this.filters = [this._crtFilter];
         }
         this._crtTime = 0;
     } catch (e) {
-        console.warn('CRT filter not supported:', e);
+        console.warn('CRT filter error:', e);
+        this.filters = null; 
     }
 };
 
@@ -246,6 +269,7 @@ CY_Scene_MenuBase.prototype.applyCRTFilter = function() {
  * Update CRT shader.
  */
 CY_Scene_MenuBase.prototype.updateCRTFilter = function() {
+    
     var crtEnabled = ConfigManager.crtShader !== false;
     
     if (this._crtFilter) {

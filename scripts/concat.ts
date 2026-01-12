@@ -28,6 +28,8 @@ function makeStubSourceMap(outFileName: string, sources: string[], sourcesConten
   };
 }
 
+const SEPARATOR = '\n//-----------------------------------------------------------------------------\n'
+
 export async function concatSource(name: string, sourceMap: boolean) {
   const orderPath = join(Deno.cwd(), `${name}.json`);
   const orderText = await Deno.readTextFile(orderPath);
@@ -41,6 +43,7 @@ export async function concatSource(name: string, sourceMap: boolean) {
     const path = join(Deno.cwd(), fileName);
     const content = await Deno.readTextFile(path);
     pieces.push(content);
+    pieces.push(SEPARATOR)
     if (sourceMap) {
       sources.push(fileName);
       sourcesContent.push(content);

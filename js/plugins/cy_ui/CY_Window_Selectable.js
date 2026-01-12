@@ -138,14 +138,28 @@ CY_Window_Selectable.prototype.createHighlightSprite = function() {
     var w = this.itemWidth();
     var h = this.itemHeight();
     this._highlightSprite.bitmap = new Bitmap(w, h);
-    // Add highlight sprite behind the contents sprite
-    // Find the contents sprite index and insert before it
+    
+    // FIX FOR MV CHILD ORDERING
     if (this._clientArea) {
         // MZ style - add to client area at index 0 (behind contents)
         this._clientArea.addChildAt(this._highlightSprite, 0);
     } else {
-        // MV style - add to window at appropriate index
-        this.addChildAt(this._highlightSprite, this.children.length > 0 ? 1 : 0);
+        // MV Style
+        // Logic: 
+        // Index 0 is typically _cyBackSprite (added in createCyBackground)
+        // We want Highlight at Index 1 (Above Back)
+        // Text Contents (added internally by MV) usually float on top or are handled separately in render
+        
+        // Find where our custom background is
+        var backIndex = this.children.indexOf(this._cyBackSprite);
+        
+        if (backIndex >= 0) {
+            // Add directly in front of the background
+            this.addChildAt(this._highlightSprite, backIndex + 1);
+        } else {
+            // Fallback if background missing
+            this.addChildAt(this._highlightSprite, 0);
+        }
     }
 };
 

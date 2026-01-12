@@ -37,7 +37,7 @@ CY_Scene_Options.prototype.constructor = CY_Scene_Options;
 CY_Scene_Options.MAX_OPTIONS_WIDTH = 816; // Max width for options content
 CY_Scene_Options.TAB_BAR_HEIGHT = 48;
 CY_Scene_Options.ACTION_BAR_HEIGHT = 48;
-CY_Scene_Options.LENS_PADDING = 26; // Padding to compensate for CRT lens distortion
+CY_Scene_Options.LENS_PADDING = 0; // Padding to compensate for CRT lens distortion
 
 //-----------------------------------------------------------------------------
 // Initialization
@@ -57,7 +57,7 @@ CY_Scene_Options.prototype.create = function() {
     this.createTabBar();
     this.createOptionsWindow();
     this.createActionBar();
-    this.applyCRTFilter();
+    // this.applyCRTFilter();
 };
 
 CY_Scene_Options.prototype.terminate = function() {
@@ -121,6 +121,7 @@ CY_Scene_Options.prototype.createGradientBackground = function() {
  */
 CY_Scene_Options.prototype.applyCRTFilter = function() {
     if (!PIXI.Filter) return;
+    return;
     
     var crtFragmentShader = `
         precision mediump float;
@@ -286,7 +287,11 @@ CY_Scene_Options.prototype.getScreenOffsets = function() {
  * Create the tab bar window - centered at top with fixed width.
  */
 CY_Scene_Options.prototype.createTabBar = function() {
-    var offsets = this.getScreenOffsets();
+    var offsets = {
+        x: 0, y: 0,
+        fullWidth: Graphics.width,
+        fullHeight: Graphics.height
+    }; // this.getScreenOffsets();
     var lensPadding = CY_Scene_Options.LENS_PADDING;
     
     this._tabBar = new CY_Window_TabBar(['SOUND', 'CONTROLS', 'GAMEPLAY']);
@@ -309,15 +314,21 @@ CY_Scene_Options.prototype.createTabBar = function() {
  * Create the options window - centered with max width, transparent background.
  */
 CY_Scene_Options.prototype.createOptionsWindow = function() {
-    var offsets = this.getScreenOffsets();
+    var offsets = {
+        x: 0, y: 0,
+        fullWidth: Graphics.width,
+        fullHeight: Graphics.height
+    };
+    const pad = 12;
+
     var lensPadding = CY_Scene_Options.LENS_PADDING;
     var maxWidth = CY_Scene_Options.MAX_OPTIONS_WIDTH;
     var width = Math.min(maxWidth, Graphics.boxWidth - 40);
     var x = Math.floor((Graphics.boxWidth - width) / 2); // Centered within boxWidth
     // Position below tab bar with lens padding
-    var y = offsets.y + lensPadding + CY_Scene_Options.TAB_BAR_HEIGHT;
+    var y = offsets.x + lensPadding + CY_Scene_Options.TAB_BAR_HEIGHT + pad;
     // Height accounts for both top and bottom lens padding
-    var height = offsets.fullHeight - CY_Scene_Options.TAB_BAR_HEIGHT - CY_Scene_Options.ACTION_BAR_HEIGHT - (lensPadding * 2);
+    var height = offsets.fullHeight - CY_Scene_Options.TAB_BAR_HEIGHT - CY_Scene_Options.ACTION_BAR_HEIGHT - (lensPadding * 2) - pad * 2;
 
     this._optionsWindow = new CY_Window_OptionsList(x, y, width, height);
     this._optionsWindow.setHandler('cancel', this.onOptionsCancel.bind(this));

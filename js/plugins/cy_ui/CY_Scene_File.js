@@ -80,7 +80,7 @@ CY_Scene_File.prototype.titleText = function() {
 // Title Bar
 //-----------------------------------------------------------------------------
 
-CY_Scene_File.prototype.ui_margin = -25
+CY_Scene_File.prototype.ui_margin = 0
 
 CY_Scene_File.prototype.createTitleBar = function() {
     var offsets = this.getScreenOffsets();
@@ -147,10 +147,10 @@ CY_Scene_File.prototype.createActionBar = function() {
     var height = CY_Scene_MenuBase.ACTION_BAR_HEIGHT;
     // Position at bottom of full screen minus lens padding
     // offsets.y is negative (e.g., -52), Graphics.height is full height (e.g., 720)
-    var y = offsets.y + Graphics.height - height - lensPadding - this.ui_margin * 2;
+    var y = 0 + Graphics.height - height - lensPadding - this.ui_margin * 2;
     
     this._actionBar = new CY_Window_ActionBar();
-    this._actionBar.move(offsets.x, y, width, height);
+    this._actionBar.move(0, y, width, height);
     this.makeWindowTransparent(this._actionBar);
     this.updateActionBar();
     this.addWindow(this._actionBar);

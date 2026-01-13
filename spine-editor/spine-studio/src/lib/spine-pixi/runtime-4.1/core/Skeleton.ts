@@ -7,7 +7,7 @@ import { IkConstraint } from './IkConstraint';
 import { TransformConstraint } from './TransformConstraint';
 import { PathConstraint } from './PathConstraint';
 import type { Skin } from './Skin';
-import { Color, MathUtils, NumberArrayLike, settings, Utils, Vector2, ISkeleton } from '../../base';
+import { Color, MathUtils, type NumberArrayLike, settings, Utils, Vector2, type ISkeleton } from '../../base';
 
 /** Stores the current pose for a skeleton.
  *

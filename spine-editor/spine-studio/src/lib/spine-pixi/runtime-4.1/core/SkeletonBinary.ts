@@ -40,7 +40,7 @@ import { TransformConstraintData } from './TransformConstraintData';
 import { PathConstraintData, SpacingMode } from './PathConstraintData';
 import { Skin } from './Skin';
 import { EventData } from './EventData';
-import { AttachmentType, BinaryInput, Color, IHasTextureRegion, PositionMode, Utils } from '../../base';
+import { AttachmentType, BinaryInput, Color, type IHasTextureRegion, PositionMode, Utils } from '../../base';
 import { BLEND_MODES } from '@pixi/core';
 import { Sequence, SequenceModeValues } from './attachments';
 

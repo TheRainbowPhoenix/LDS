@@ -1,5 +1,5 @@
 import { Attachment, VertexAttachment } from './Attachment';
-import { AttachmentType, Color, IMeshAttachment, IHasTextureRegion, NumberArrayLike, TextureRegion, Utils } from '../../../base';
+import { AttachmentType, Color, type IMeshAttachment, type IHasTextureRegion, type NumberArrayLike, TextureRegion, Utils } from '../../../base';
 import type { Sequence } from './Sequence';
 import type { Slot } from '../Slot';
 

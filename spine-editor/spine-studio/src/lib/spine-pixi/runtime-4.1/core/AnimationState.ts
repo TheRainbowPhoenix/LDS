@@ -1,4 +1,4 @@
-import { IAnimationState, IAnimationStateListener, ITrackEntry, MathUtils, MixBlend, MixDirection, Pool, StringSet, Utils } from '../../base';
+import { type IAnimationState, type IAnimationStateListener, type ITrackEntry, MathUtils, MixBlend, MixDirection, Pool, StringSet, Utils } from '../../base';
 import { Animation, AttachmentTimeline, DrawOrderTimeline, EventTimeline, RotateTimeline, Timeline } from './Animation';
 import type { AnimationStateData } from './AnimationStateData';
 import type { Event } from './Event';

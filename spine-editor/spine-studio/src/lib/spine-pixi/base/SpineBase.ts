@@ -19,6 +19,7 @@ const tempRgb = [0, 0, 0];
 export interface ISpineDisplayObject extends DisplayObject {
     region?: TextureRegion;
     attachment?: IAttachment;
+    slot?: ISlot;
 }
 
 /**
@@ -26,7 +27,9 @@ export interface ISpineDisplayObject extends DisplayObject {
  */
 export class SpineSprite extends Sprite implements ISpineDisplayObject {
     region?: TextureRegion = null;
+    region?: TextureRegion = null;
     attachment?: IAttachment = null;
+    slot?: ISlot = null;
 }
 
 /**
@@ -35,6 +38,7 @@ export class SpineSprite extends Sprite implements ISpineDisplayObject {
 export class SpineMesh extends SimpleMesh implements ISpineDisplayObject {
     region?: TextureRegion = null;
     attachment?: IAttachment = null;
+    slot?: ISlot = null;
 
     constructor(texture: Texture, vertices?: Float32Array, uvs?: Float32Array, indices?: Uint16Array, drawMode?: number) {
         super(texture, vertices, uvs, indices, drawMode);
@@ -57,14 +61,13 @@ export class SpineMesh extends SimpleMesh implements ISpineDisplayObject {
  * @param spineData {object} The spine data loaded from a spine atlas.
  */
 export abstract class SpineBase<
-        Skeleton extends ISkeleton,
-        SkeletonData extends ISkeletonData,
-        AnimationState extends IAnimationState,
-        AnimationStateData extends IAnimationStateData
-    >
+    Skeleton extends ISkeleton,
+    SkeletonData extends ISkeletonData,
+    AnimationState extends IAnimationState,
+    AnimationStateData extends IAnimationStateData
+>
     extends Container
-    implements GlobalMixins.Spine
-{
+    implements GlobalMixins.Spine {
     tintRgb: ArrayLike<number>;
     spineData: SkeletonData;
     skeleton: Skeleton;
@@ -561,6 +564,10 @@ export abstract class SpineBase<
             this.setSpriteRegion(attachment, sprite, attachment.region);
         }
 
+        sprite.slot = slot;
+        sprite.eventMode = 'static';
+        sprite.cursor = 'pointer';
+
         slot.sprites = slot.sprites || {};
         slot.sprites[defName] = sprite;
 
@@ -602,6 +609,10 @@ export abstract class SpineBase<
         if (region) {
             this.setMeshRegion(attachment, strip, region);
         }
+
+        strip.slot = slot;
+        strip.eventMode = 'static';
+        strip.cursor = 'pointer';
 
         slot.meshes = slot.meshes || {};
         slot.meshes[attachment.id] = strip;

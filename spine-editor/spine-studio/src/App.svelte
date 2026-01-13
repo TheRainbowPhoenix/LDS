@@ -8,6 +8,7 @@
   import TreeView, {
     type TreeItemData,
   } from "./lib/components/TreeView.svelte";
+  import LeftSidebar from "./lib/components/LeftSidebar.svelte";
   import PropertyPanel from "./lib/components/PropertyPanel.svelte";
   import ZoomControls from "./lib/components/ZoomControls.svelte";
 
@@ -138,12 +139,9 @@
 
   <!-- Main Workspace -->
   <div class="workspace">
-    <!-- Left Sidebar: Hierarchy -->
+    <!-- Left Sidebar: Hierarchy & History -->
     <aside class="sidebar left">
-      <div class="sidebar-header">Hierarchy</div>
-      <div class="sidebar-content">
-        <TreeView items={treeItems} bind:selectedId />
-      </div>
+      <LeftSidebar {treeItems} bind:selectedId />
     </aside>
 
     <!-- Center: Stage -->

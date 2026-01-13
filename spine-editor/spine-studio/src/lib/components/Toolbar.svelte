@@ -1,6 +1,6 @@
 <script lang="ts">
     import { createToolbar, melt } from "@melt-ui/svelte";
-    import { currentTool } from "../Store";
+    import { currentTool, undo, redo } from "../Store";
     import {
         MousePointer2,
         Move,
@@ -60,10 +60,20 @@
     <div class="separator" use:melt={$separator} />
 
     <div class="group">
-        <button class="tool-btn" use:melt={$button} title="Undo">
+        <button
+            class="tool-btn"
+            use:melt={$button}
+            title="Undo"
+            on:click={undo}
+        >
             <Undo size={18} />
         </button>
-        <button class="tool-btn" use:melt={$button} title="Redo">
+        <button
+            class="tool-btn"
+            use:melt={$button}
+            title="Redo"
+            on:click={redo}
+        >
             <Redo size={18} />
         </button>
     </div>

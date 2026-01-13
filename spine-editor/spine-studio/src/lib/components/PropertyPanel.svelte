@@ -22,19 +22,24 @@
         const val = parseFloat(newVal);
         if (val === oldVal) return;
 
-        // We need a snapshot of the object reference?
-        // Actually, selectedNode holds the reference.
-        // We just need to know which bone.
         const node = $selectedNode;
         if (!node) return;
 
+        // Map prop to user friendly name
+        let actionName = `Set ${prop}`;
+        if (prop === "rotation") actionName = `Rotate`;
+        else if (prop.startsWith("scale"))
+            actionName = `Scale ${prop.slice(-1)}`;
+        else if (prop.startsWith("shear"))
+            actionName = `Shear ${prop.slice(-1)}`;
+        else if (prop === "x" || prop === "y")
+            actionName = `Translate ${prop.toUpperCase()}`;
+
         addHistory({
-            name: `Edit ${prop}`,
+            name: `${actionName} of ${node.name}`,
             undo: () => {
-                // We need to revert the specific property on the specific object reference
-                // 'node' variable captured in closure is the reference.
                 (node as any)[prop] = oldVal;
-                selectedNode.set(node); // Trigger update
+                selectedNode.set(node);
             },
             redo: () => {
                 (node as any)[prop] = val;

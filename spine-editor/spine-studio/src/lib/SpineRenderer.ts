@@ -197,6 +197,39 @@ export class SpineRenderer {
     }
 
     setupInputListeners(canvas: HTMLCanvasElement) {
+        let isPanning = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (e.button === 1) { // Middle Mouse
+                e.preventDefault();
+                isPanning = true;
+                lastX = e.clientX;
+                lastY = e.clientY;
+                canvas.style.cursor = 'grabbing';
+            }
+        });
+
+        window.addEventListener('mouseup', (e) => {
+            if (e.button === 1 && isPanning) {
+                isPanning = false;
+                canvas.style.cursor = 'default';
+            }
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (isPanning) {
+                const dx = e.clientX - lastX;
+                const dy = e.clientY - lastY;
+                lastX = e.clientX;
+                lastY = e.clientY;
+
+                this.rootContainer.x += dx;
+                this.rootContainer.y += dy;
+            }
+        });
+
         canvas.addEventListener('wheel', (e) => {
             e.preventDefault();
 
@@ -323,8 +356,9 @@ export class SpineRenderer {
 
             // Only add if changed
             if (JSON.stringify(startState) !== JSON.stringify(endState)) {
+                const typeName = this.dragType ? this.dragType.charAt(0).toUpperCase() + this.dragType.slice(1) : 'Transform';
                 addHistory({
-                    name: `Transform ${bone.name}`,
+                    name: `${typeName} ${bone.name}`,
                     undo: () => {
                         Object.assign(bone, startState);
                         selectedNode.set(bone);

@@ -28,6 +28,10 @@
   --prop-panel-width: 280px;
 }
 
+[hidden] {
+  display: none
+}
+
 body {
   background-color: var(--bg-app);
   color: var(--text-main);

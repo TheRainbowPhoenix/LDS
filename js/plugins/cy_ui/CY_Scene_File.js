@@ -43,7 +43,7 @@ CY_Scene_File.MAX_SAVE_FILES = 20;
 // Initialization
 //-----------------------------------------------------------------------------
 
-CY_Scene_File.prototype.initialize = function() {
+CY_Scene_File.prototype.initialize = function () {
     CY_Scene_MenuBase.prototype.initialize.call(this);
 };
 
@@ -51,14 +51,14 @@ CY_Scene_File.prototype.initialize = function() {
 // Scene Lifecycle
 //-----------------------------------------------------------------------------
 
-CY_Scene_File.prototype.create = function() {
+CY_Scene_File.prototype.create = function () {
     CY_Scene_MenuBase.prototype.create.call(this);
     this.createTitleBar();
     this.createSaveListWindow();
     this.createActionBar();
 };
 
-CY_Scene_File.prototype.start = function() {
+CY_Scene_File.prototype.start = function () {
     CY_Scene_MenuBase.prototype.start.call(this);
     this._saveListWindow.activate();
     this._saveListWindow.select(0);
@@ -68,11 +68,11 @@ CY_Scene_File.prototype.start = function() {
 // Mode (Override in subclasses)
 //-----------------------------------------------------------------------------
 
-CY_Scene_File.prototype.mode = function() {
+CY_Scene_File.prototype.mode = function () {
     return 'load'; // Override: 'save' or 'load'
 };
 
-CY_Scene_File.prototype.titleText = function() {
+CY_Scene_File.prototype.titleText = function () {
     return this.mode() === 'save' ? 'Save Game' : 'Load Game';
 };
 
@@ -82,33 +82,33 @@ CY_Scene_File.prototype.titleText = function() {
 
 CY_Scene_File.prototype.ui_margin = 0
 
-CY_Scene_File.prototype.createTitleBar = function() {
+CY_Scene_File.prototype.createTitleBar = function () {
     var offsets = this.getScreenOffsets();
     var lensPadding = this.getLensPadding();
-    
+
     // Title bar sprite - needs negative offset to reach screen edge (scene is positioned at box area)
     this._titleBarSprite = new Sprite();
     this._titleBarSprite.bitmap = new Bitmap(Graphics.width, CY_Scene_MenuBase.TOP_BAR_HEIGHT);
     this._titleBarSprite.x = 0; // offsets.x; // Negative offset to reach left screen edge
     this._titleBarSprite.y = offsets.y + this.ui_margin + lensPadding; // Negative offset + lens padding
-    
+
     this.drawTitleBar();
     this.addChild(this._titleBarSprite);
 };
 
-CY_Scene_File.prototype.drawTitleBar = function() {
+CY_Scene_File.prototype.drawTitleBar = function () {
     var bmp = this._titleBarSprite.bitmap;
     var w = bmp.width;
     var h = bmp.height;
-    
+
     bmp.clear();
-    
+
     // Draw title text centered
     bmp.fontFace = 'GameFont';
     bmp.fontSize = 24;
     bmp.textColor = CY_System.Colors.white;
     bmp.drawText(this.titleText(), 0, 8, w, h - 10, 'center');
-    
+
     // Draw bottom border (2px, red #CC413C)
     bmp.fillRect(0, h - 2, w, 2, '#CC413C');
 };
@@ -117,10 +117,10 @@ CY_Scene_File.prototype.drawTitleBar = function() {
 // Save List Window
 //-----------------------------------------------------------------------------
 
-CY_Scene_File.prototype.createSaveListWindow = function() {
+CY_Scene_File.prototype.createSaveListWindow = function () {
     var offsets = this.getScreenOffsets();
     var lensPadding = this.getLensPadding();
-    
+
     var width = 600;
     var x = Math.floor((Graphics.boxWidth - width) / 2);
     // Position below title bar (offsets.y is negative, lensPadding pushes down from top)
@@ -128,7 +128,7 @@ CY_Scene_File.prototype.createSaveListWindow = function() {
     // Height calculation: from current y to action bar position
     var bottomY = offsets.y + Graphics.height - lensPadding - CY_Scene_MenuBase.ACTION_BAR_HEIGHT;
     var height = bottomY - y - (this.ui_margin * 2);
-    
+
     this._saveListWindow = new CY_Window_SaveList(x, y + this.ui_margin, width, height);
     this._saveListWindow.setHandler('ok', this.onSaveSlotOk.bind(this));
     this._saveListWindow.setHandler('cancel', this.popScene.bind(this));
@@ -140,7 +140,7 @@ CY_Scene_File.prototype.createSaveListWindow = function() {
 // Action Bar
 //-----------------------------------------------------------------------------
 
-CY_Scene_File.prototype.createActionBar = function() {
+CY_Scene_File.prototype.createActionBar = function () {
     var offsets = this.getScreenOffsets();
     var lensPadding = this.getLensPadding();
     var width = Graphics.width;
@@ -148,7 +148,7 @@ CY_Scene_File.prototype.createActionBar = function() {
     // Position at bottom of full screen minus lens padding
     // offsets.y is negative (e.g., -52), Graphics.height is full height (e.g., 720)
     var y = 0 + Graphics.height - height - lensPadding - this.ui_margin * 2;
-    
+
     this._actionBar = new CY_Window_ActionBar();
     this._actionBar.move(0, y, width, height);
     this.makeWindowTransparent(this._actionBar);
@@ -156,15 +156,15 @@ CY_Scene_File.prototype.createActionBar = function() {
     this.addWindow(this._actionBar);
 };
 
-CY_Scene_File.prototype.updateActionBar = function() {
+CY_Scene_File.prototype.updateActionBar = function () {
     if (!this._actionBar) return;
-    
+
     var actions = [
         { button: 'B', label: 'Close' },
         { button: 'X', label: 'Delete' },
         { button: 'A', label: 'Select' }
     ];
-    
+
     this._actionBar.setActions(actions);
 };
 
@@ -172,23 +172,23 @@ CY_Scene_File.prototype.updateActionBar = function() {
 // Handlers
 //-----------------------------------------------------------------------------
 
-CY_Scene_File.prototype.onSaveSlotOk = function() {
+CY_Scene_File.prototype.onSaveSlotOk = function () {
     // Override in subclasses
     var saveId = this._saveListWindow.index() + 1;
     console.log('Selected save slot:', saveId);
     this._saveListWindow.activate();
 };
 
-CY_Scene_File.prototype.update = function() {
+CY_Scene_File.prototype.update = function () {
     CY_Scene_MenuBase.prototype.update.call(this);
-    
+
     // Handle delete key
     if (Input.isTriggered('menu') && this._saveListWindow.active) {
         this.onDeleteSave();
     }
 };
 
-CY_Scene_File.prototype.onDeleteSave = function() {
+CY_Scene_File.prototype.onDeleteSave = function () {
     var saveId = this._saveListWindow.index() + 1;
     if (DataManager.isThisGameFile(saveId)) {
         SoundManager.playOk();
@@ -211,11 +211,11 @@ function CY_Scene_Save() {
 CY_Scene_Save.prototype = Object.create(CY_Scene_File.prototype);
 CY_Scene_Save.prototype.constructor = CY_Scene_Save;
 
-CY_Scene_Save.prototype.mode = function() {
+CY_Scene_Save.prototype.mode = function () {
     return 'save';
 };
 
-CY_Scene_Save.prototype.onSaveSlotOk = function() {
+CY_Scene_Save.prototype.onSaveSlotOk = function () {
     var saveId = this._saveListWindow.index() + 1;
     $gameSystem.onBeforeSave();
     if (DataManager.saveGame(saveId)) {
@@ -239,11 +239,11 @@ function CY_Scene_Load() {
 CY_Scene_Load.prototype = Object.create(CY_Scene_File.prototype);
 CY_Scene_Load.prototype.constructor = CY_Scene_Load;
 
-CY_Scene_Load.prototype.mode = function() {
+CY_Scene_Load.prototype.mode = function () {
     return 'load';
 };
 
-CY_Scene_Load.prototype.onSaveSlotOk = function() {
+CY_Scene_Load.prototype.onSaveSlotOk = function () {
     var saveId = this._saveListWindow.index() + 1;
     if (DataManager.isThisGameFile(saveId)) {
         if (DataManager.loadGame(saveId)) {
@@ -253,7 +253,14 @@ CY_Scene_Load.prototype.onSaveSlotOk = function() {
                 $gamePlayer.reserveTransfer($gameMap.mapId(), $gamePlayer.x, $gamePlayer.y);
                 $gamePlayer.requestMapReload();
             }
-            SceneManager.goto(Scene_Map);
+
+            // Use CY_Scene_Loading if available
+            if (typeof CY_Scene_Loading !== 'undefined') {
+                CY_Scene_Loading.prepare(Scene_Map);
+                SceneManager.goto(CY_Scene_Loading);
+            } else {
+                SceneManager.goto(Scene_Map);
+            }
         } else {
             SoundManager.playBuzzer();
         }

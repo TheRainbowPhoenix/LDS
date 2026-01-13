@@ -11,6 +11,7 @@
   "js/plugins/cy_ui/CY_Window_TitleCommand.js",
   "js/plugins/cy_ui/CY_Scene_MenuBase.js",
   "js/plugins/cy_ui/CY_Scene_Title.js",
+  "js/plugins/cy_ui/CY_Scene_Loading.js",
   "js/plugins/cy_ui/CY_Scene_Options.js",
   "js/plugins/cy_ui/CY_Scene_File.js",
 

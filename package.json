@@ -35,6 +35,10 @@
   },
   "author": "rpgtkoolmv team",
   "license": "MIT",
+  "dependencies": {
+    "@types/pixi.js": "4.8.0",
+    "pixi.js": "^4.8.9"
+  },
   "devDependencies": {
     "@pixi-spine/all-3.8": "^4.0.6",
     "bestzip": "^1.1.3",

@@ -28,5 +28,6 @@
   "js/rpg_objects/game_followers.js",
   "js/rpg_objects/game_vehicle.js",
   "js/rpg_objects/game_event.js",
-  "js/rpg_objects/game_interpreter.js"
+  "js/rpg_objects/game_interpreter.js",
+  "js/rpg_objects/impact_map.js"
 ]

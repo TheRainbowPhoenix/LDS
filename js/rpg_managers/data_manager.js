@@ -38,6 +38,8 @@ var $gameTroop        = null;
 var $gameMap          = null;
 var $gamePlayer       = null;
 var $testEvent        = null;
+var $dataImpactMap = null;
+var $gameImpactMap = null;
 
 DataManager._globalId       = 'RPGMV';
 DataManager._lastAccessedId = 1;
@@ -111,6 +113,12 @@ DataManager.loadMapData = function(mapId) {
     }
 };
 
+DataManager.loadImpactMapData = function(mapId) {
+    //TODO: Use the mapId to determine the filename.
+    var filename = 'data/maps/hideout/entrance.json';
+    this.loadDataFile('$dataImpactMap', filename);
+};
+
 DataManager.makeEmptyMap = function() {
     $dataMap = {};
     $dataMap.data = [];
@@ -123,6 +131,10 @@ DataManager.makeEmptyMap = function() {
 DataManager.isMapLoaded = function() {
     this.checkError();
     return !!$dataMap;
+};
+
+DataManager.isImpactMapLoaded = function() {
+    return !!$dataImpactMap;
 };
 
 DataManager.onLoad = function(object) {
@@ -209,6 +221,8 @@ DataManager.createGameObjects = function() {
     $gameTroop         = new Game_Troop();
     $gameMap           = new Game_Map();
     $gamePlayer        = new Game_Player();
+    $gameImpactMap     = new Impact_Map();
+
 };
 
 DataManager.setupNewGame = function() {

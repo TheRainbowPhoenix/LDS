@@ -116,3 +116,30 @@ if (CY_Main.Parameters.enableCyberpunkOptions) {
 
 globalThis.CY_Main = CY_Main;
 
+CY_Main.makeTextSprite = function(text, x, y, w, h, opt) {
+  opt = opt || {};
+  w = w || 200;
+  h = h || 48;
+
+  var spr = new Sprite(new Bitmap(w, h));
+  spr.x = x || 0;
+  spr.y = y || 0;
+
+  var bmp = spr.bitmap;
+  bmp.fontFace = opt.fontFace || 'GameFont';
+  bmp.fontSize = opt.fontSize || 20;
+  bmp.textColor = opt.textColor || '#ffffff';
+  bmp.outlineColor = opt.outlineColor || 'rgba(0,0,0,0.6)';
+  bmp.outlineWidth = opt.outlineWidth != null ? opt.outlineWidth : 4;
+
+  bmp.clear();
+  bmp.drawText(text, 0, 0, w, h, opt.align || 'left');
+
+  // store a redraw method for later updates
+  spr.setText = function(newText) {
+    bmp.clear();
+    bmp.drawText(newText, 0, 0, w, h, opt.align || 'left');
+  };
+
+  return spr;
+}

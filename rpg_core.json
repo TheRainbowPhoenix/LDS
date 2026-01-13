@@ -22,5 +22,6 @@
   "js/rpg_core/web_audio.js",
   "js/rpg_core/html5audio.js",
   "js/rpg_core/json_ex.js",
+  "js/rpg_core/tilemap_impactlayer.js",
   "js/rpg_core/resource_handler.js"
 ]

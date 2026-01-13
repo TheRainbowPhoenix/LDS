@@ -51,7 +51,7 @@ CY_Scene_Title.prototype.constructor = CY_Scene_Title;
  * Initialize the Cyberpunk title scene.
  * Requirement 3.1: Extends Scene_Base
  */
-CY_Scene_Title.prototype.initialize = function() {
+CY_Scene_Title.prototype.initialize = function () {
     Scene_Base.prototype.initialize.call(this);
 };
 
@@ -63,7 +63,7 @@ CY_Scene_Title.prototype.initialize = function() {
  * Create all scene elements.
  * Creates background, logo, and command window in order.
  */
-CY_Scene_Title.prototype.create = function() {
+CY_Scene_Title.prototype.create = function () {
     Scene_Base.prototype.create.call(this);
     this.createBackground();
     this.createSideStripe();
@@ -77,7 +77,7 @@ CY_Scene_Title.prototype.create = function() {
  * Clears scene stack, plays music, and fades in.
  * Requirement 3.4: Plays title BGM on scene start
  */
-CY_Scene_Title.prototype.start = function() {
+CY_Scene_Title.prototype.start = function () {
     Scene_Base.prototype.start.call(this);
     SceneManager.clearStack();
     this.centerSprite(this._backSprite1);
@@ -90,18 +90,18 @@ CY_Scene_Title.prototype.start = function() {
  * Update the scene each frame.
  * Opens command window when not busy and updates CRT effects.
  */
-CY_Scene_Title.prototype.update = function() {
+CY_Scene_Title.prototype.update = function () {
     if (!this.isBusy()) {
         this._commandWindow.open();
     }
-    
+
     // Update CRT shader animation
     this.updateCRTFilter();
 
     if (this._titleSpine) {
-        this._titleSpine.update(0.016); 
+        this._titleSpine.update(0.016);
     }
-    
+
     Scene_Base.prototype.update.call(this);
 };
 
@@ -109,7 +109,7 @@ CY_Scene_Title.prototype.update = function() {
  * Check if the scene is busy (transitioning).
  * @returns {boolean} True if command window is closing or scene is busy
  */
-CY_Scene_Title.prototype.isBusy = function() {
+CY_Scene_Title.prototype.isBusy = function () {
     return this._commandWindow.isClosing() || Scene_Base.prototype.isBusy.call(this);
 };
 
@@ -117,7 +117,7 @@ CY_Scene_Title.prototype.isBusy = function() {
  * Terminate the scene.
  * Takes a snapshot for background use in other scenes.
  */
-CY_Scene_Title.prototype.terminate = function() {
+CY_Scene_Title.prototype.terminate = function () {
     Scene_Base.prototype.terminate.call(this);
     SceneManager.snapForBackground();
 };
@@ -130,7 +130,7 @@ CY_Scene_Title.prototype.terminate = function() {
  * Create background sprites using title1 and title2 images.
  * Requirement 3.5: Supports background images (title1 and title2)
  */
-CY_Scene_Title.prototype.createBackground = function() {
+CY_Scene_Title.prototype.createBackground = function () {
     this._backSprite1 = new Sprite(
         ImageManager.loadTitle1($dataSystem.title1Name)
     );
@@ -145,7 +145,7 @@ CY_Scene_Title.prototype.createBackground = function() {
  * Center a sprite on the screen.
  * @param {Sprite} sprite - The sprite to center
  */
-CY_Scene_Title.prototype.centerSprite = function(sprite) {
+CY_Scene_Title.prototype.centerSprite = function (sprite) {
     sprite.x = Graphics.width / 2;
     sprite.y = Graphics.height / 2;
     sprite.anchor.x = 0.5;
@@ -160,57 +160,57 @@ CY_Scene_Title.prototype.centerSprite = function(sprite) {
  * Create the vertical dark red stripe on the left side with CRT effects.
  * Features: scanlines, borders, inner shadow, and CRT glitch shader.
  */
-CY_Scene_Title.prototype.createSideStripe = function() {
+CY_Scene_Title.prototype.createSideStripe = function () {
     var stripeWidth = 320;
     var stripeX = 60;
     var stripeHeight = Graphics.height;
-    
+
     // Create container for the stripe and effects
     this._sideStripeContainer = new PIXI.Container();
     this._sideStripeContainer.x = stripeX;
     this._sideStripeContainer.y = 0;
-    
+
     // Create base stripe sprite
     this._sideStripeSprite = new Sprite();
     this._sideStripeSprite.bitmap = new Bitmap(stripeWidth, stripeHeight);
-    
+
     var bmp = this._sideStripeSprite.bitmap;
     var ctx = bmp._context;
-    
+
     // Base fill with semi-transparent dark red
     bmp.fillRect(0, 0, stripeWidth, stripeHeight, 'rgba(132, 38, 36, 0.37)');
-    
+
     // Draw inner box shadow effect (left and right only)
     this.drawInnerBoxShadow(ctx, stripeWidth, stripeHeight);
-    
+
     // Draw scanlines effect
     this.drawScanlines(ctx, stripeWidth, stripeHeight);
-    
+
     // Draw left and right borders
     var borderWidth = 2;
     var borderColor = 'rgba(255, 97, 88, 0.6)';
     bmp.fillRect(0, 0, borderWidth, stripeHeight, borderColor);
     bmp.fillRect(stripeWidth - borderWidth, 0, borderWidth, stripeHeight, borderColor);
-    
+
     bmp._baseTexture.update();
-    
+
     this._sideStripeContainer.addChild(this._sideStripeSprite);
-    
+
     // Apply CRT glitch filter if PIXI filters are available
     this.applyCRTFilter();
-    
+
     this.addChild(this._sideStripeContainer);
 };
 
 /**
  * Apply CRT-like glitch filter to the side stripe.
  */
-CY_Scene_Title.prototype.applyCRTFilter = function() {
+CY_Scene_Title.prototype.applyCRTFilter = function () {
     // Create custom CRT filter using PIXI
     if (!PIXI.Filter) return;
-    
+
     var crtVertexShader = null; // Use default vertex shader
-    
+
     var crtFragmentShader = `
         precision mediump float;
         
@@ -258,7 +258,7 @@ CY_Scene_Title.prototype.applyCRTFilter = function() {
             gl_FragColor = color;
         }
     `;
-    
+
     try {
         this._crtFilter = new PIXI.Filter(crtVertexShader, crtFragmentShader, {
             uTime: 0.0,
@@ -266,7 +266,7 @@ CY_Scene_Title.prototype.applyCRTFilter = function() {
             uScanlineIntensity: 0.4,
             uGlitchIntensity: 0.02
         });
-        
+
         this._sideStripeContainer.filters = [this._crtFilter];
         this._crtTime = 0;
     } catch (e) {
@@ -277,11 +277,11 @@ CY_Scene_Title.prototype.applyCRTFilter = function() {
 /**
  * Update CRT shader time uniform for animation.
  */
-CY_Scene_Title.prototype.updateCRTFilter = function() {
+CY_Scene_Title.prototype.updateCRTFilter = function () {
     if (this._crtFilter && this._crtFilter.uniforms) {
         this._crtTime += 0.016; // ~60fps
         this._crtFilter.uniforms.uTime = this._crtTime;
-        
+
         // Random glitch spikes
         if (Math.random() < 0.02) {
             this._crtFilter.uniforms.uGlitchIntensity = 0.05 + Math.random() * 0.1;
@@ -301,30 +301,30 @@ CY_Scene_Title.prototype.updateCRTFilter = function() {
  * @param {number} width - Width of the stripe
  * @param {number} height - Height of the stripe
  */
-CY_Scene_Title.prototype.drawInnerBoxShadow = function(ctx, width, height) {
+CY_Scene_Title.prototype.drawInnerBoxShadow = function (ctx, width, height) {
     var shadowColor = 'rgba(132, 38, 36, 0.5)'; // #842624 with opacity
     var shadowSize = 40;
-    
+
     // Extend beyond top and bottom to hide those shadows
     var extendY = -100;
     var extendedHeight = height + 200;
-    
+
     ctx.save();
-    
+
     // Left edge shadow (gradient from dark to transparent)
     var leftGradient = ctx.createLinearGradient(0, 0, shadowSize, 0);
     leftGradient.addColorStop(0, shadowColor);
     leftGradient.addColorStop(1, 'rgba(132, 38, 36, 0)');
     ctx.fillStyle = leftGradient;
     ctx.fillRect(0, extendY, shadowSize, extendedHeight);
-    
+
     // Right edge shadow
     var rightGradient = ctx.createLinearGradient(width - shadowSize, 0, width, 0);
     rightGradient.addColorStop(0, 'rgba(132, 38, 36, 0)');
     rightGradient.addColorStop(1, shadowColor);
     ctx.fillStyle = rightGradient;
     ctx.fillRect(width - shadowSize, extendY, shadowSize, extendedHeight);
-    
+
     ctx.restore();
 };
 
@@ -335,20 +335,20 @@ CY_Scene_Title.prototype.drawInnerBoxShadow = function(ctx, width, height) {
  * @param {number} width - Width of the stripe
  * @param {number} height - Height of the stripe
  */
-CY_Scene_Title.prototype.drawScanlines = function(ctx, width, height) {
+CY_Scene_Title.prototype.drawScanlines = function (ctx, width, height) {
     ctx.save();
-    
+
     var lineHeight = 2;
     var gap = 2;
     var baseColor = [132, 38, 36]; // #842624 RGB
-    
+
     for (var y = 0; y < height; y += lineHeight + gap) {
         // Vary opacity for more organic look
         var opacityVariation = 0.08 + Math.random() * 0.12; // 0.08 to 0.20
         ctx.fillStyle = 'rgba(' + baseColor[0] + ',' + baseColor[1] + ',' + baseColor[2] + ',' + opacityVariation + ')';
         ctx.fillRect(0, y, width, lineHeight);
     }
-    
+
     ctx.restore();
 };
 
@@ -359,7 +359,7 @@ CY_Scene_Title.prototype.drawScanlines = function(ctx, width, height) {
 /**
  * Creates the Spine character if the MpiShowSpine plugin is active and data is loaded.
  */
-CY_Scene_Title.prototype.createSpineDisplay = function() {
+CY_Scene_Title.prototype.createSpineDisplay = function () {
     // 1. Safety Check: Is MpiShowSpine imported and is the data object ready?
     if (typeof Makonet === 'undefined' || !Makonet['MpiShowSpine'] || !Makonet['MpiShowSpine'].spineData) {
         console.error("MpiShowSpine plugin is missing!");
@@ -371,7 +371,7 @@ CY_Scene_Title.prototype.createSpineDisplay = function() {
 
     // 2. Check if the specific file 'seele' is loaded
     var spineData = Makonet['MpiShowSpine'].spineData[spineName];
-    
+
     if (spineData) {
         try {
             // Create the PIXI Spine object directly
@@ -380,10 +380,10 @@ CY_Scene_Title.prototype.createSpineDisplay = function() {
             // Set Coordinates
             // X = Graphics.width - 500 as requested
             this._titleSpine.x = Graphics.width - 500;
-            
+
             // Y position: Spine origins are usually at the feet. 
             // We set it to the bottom of the screen (adjust -50 as needed)
-            this._titleSpine.y = Graphics.height - 50; 
+            this._titleSpine.y = Graphics.height - 50;
 
             // Set Scale (75% as requested)
             this._titleSpine.scale.set(0.75, 0.75);
@@ -410,14 +410,14 @@ CY_Scene_Title.prototype.createSpineDisplay = function() {
  * Create the game logo/title sprite.
  * Requirement 3.2: Game logo/title on left side of screen with yellow text
  */
-CY_Scene_Title.prototype.createLogo = function() {
+CY_Scene_Title.prototype.createLogo = function () {
     this._logoSprite = new Sprite();
     this._logoSprite.bitmap = new Bitmap(300, 100);
-    
+
     // Position on left side, above the command menu
     this._logoSprite.x = 80;
     this._logoSprite.y = Math.floor(Graphics.boxHeight / 2) - 150;
-    
+
     // Draw game title with Cyberpunk styling (yellow text)
     const bmp = this._logoSprite.bitmap;
     bmp.fontFace = 'GameFont';
@@ -426,7 +426,7 @@ CY_Scene_Title.prototype.createLogo = function() {
     bmp.outlineColor = 'rgba(0, 0, 0, 0.8)';
     bmp.outlineWidth = 4;
     bmp.drawText($dataSystem.gameTitle, 0, 0, 300, 60, 'left');
-    
+
     this.addChild(this._logoSprite);
 };
 
@@ -438,18 +438,18 @@ CY_Scene_Title.prototype.createLogo = function() {
  * Create the command window with Cyberpunk styling.
  * Requirement 3.3: Command menu below logo on left side
  */
-CY_Scene_Title.prototype.createCommandWindow = function() {
+CY_Scene_Title.prototype.createCommandWindow = function () {
     this._commandWindow = new CY_Window_TitleCommand();
-    
+
     // Wire command handlers
     this._commandWindow.setHandler('newGame', this.commandNewGame.bind(this));
     this._commandWindow.setHandler('continue', this.commandContinue.bind(this));
     this._commandWindow.setHandler('loadGame', this.commandLoadGame.bind(this));
     this._commandWindow.setHandler('options', this.commandOptions.bind(this));
     this._commandWindow.setHandler('credits', this.commandCredits.bind(this));
-    this._commandWindow.setHandler('phaser',  this.commandPhaser.bind(this));
-    this._commandWindow.setHandler('spine',  this.commandSpine.bind(this));
-    
+    this._commandWindow.setHandler('phaser', this.commandPhaser.bind(this));
+    this._commandWindow.setHandler('spine', this.commandSpine.bind(this));
+
     this.addChild(this._commandWindow);
 };
 
@@ -461,18 +461,25 @@ CY_Scene_Title.prototype.createCommandWindow = function() {
  * Handle New Game command.
  * Sets up a new game and transitions to the map scene.
  */
-CY_Scene_Title.prototype.commandNewGame = function() {
+CY_Scene_Title.prototype.commandNewGame = function () {
     DataManager.setupNewGame();
     this._commandWindow.close();
     this.fadeOutAll();
-    SceneManager.goto(Scene_Map);
+
+    // Use CY_Scene_Loading if available
+    if (typeof CY_Scene_Loading !== 'undefined') {
+        CY_Scene_Loading.prepare(Scene_Map);
+        SceneManager.goto(CY_Scene_Loading);
+    } else {
+        SceneManager.goto(Scene_Map);
+    }
 };
 
 /**
  * Handle Continue command.
  * Loads the most recent save file.
  */
-CY_Scene_Title.prototype.commandContinue = function() {
+CY_Scene_Title.prototype.commandContinue = function () {
     this._commandWindow.close();
     // Use CY_Scene_Load if available
     if (typeof CY_Scene_Load !== 'undefined') {
@@ -486,7 +493,7 @@ CY_Scene_Title.prototype.commandContinue = function() {
  * Handle Load Game command.
  * Opens the load game scene.
  */
-CY_Scene_Title.prototype.commandLoadGame = function() {
+CY_Scene_Title.prototype.commandLoadGame = function () {
     this._commandWindow.close();
     // Use CY_Scene_Load if available
     if (typeof CY_Scene_Load !== 'undefined') {
@@ -500,7 +507,7 @@ CY_Scene_Title.prototype.commandLoadGame = function() {
  * Handle Options/Settings command.
  * Opens the options scene (CY_Scene_Options when available).
  */
-CY_Scene_Title.prototype.commandOptions = function() {
+CY_Scene_Title.prototype.commandOptions = function () {
     this._commandWindow.close();
     // Use CY_Scene_Options if available, otherwise fall back to Scene_Options
     if (typeof CY_Scene_Options !== 'undefined') {
@@ -514,18 +521,18 @@ CY_Scene_Title.prototype.commandOptions = function() {
  * Handle Credits command.
  * Currently reactivates the command window (credits scene can be implemented later).
  */
-CY_Scene_Title.prototype.commandCredits = function() {
+CY_Scene_Title.prototype.commandCredits = function () {
     // Credits scene placeholder - reactivate command window for now
     this._commandWindow.activate();
 };
 
-CY_Scene_Title.prototype.commandPhaser = function() {
+CY_Scene_Title.prototype.commandPhaser = function () {
     this._commandWindow.close();
     this.fadeOutAll();
     SceneManager.goto(Scene_PhaserTest);
 };
 
-CY_Scene_Title.prototype.commandSpine = function() {
+CY_Scene_Title.prototype.commandSpine = function () {
     this._commandWindow.close();
     this.fadeOutAll();
     SceneManager.goto(Scene_SpineTest);
@@ -539,7 +546,7 @@ CY_Scene_Title.prototype.commandSpine = function() {
  * Play the title screen background music.
  * Requirement 3.4: Plays title BGM on scene start
  */
-CY_Scene_Title.prototype.playTitleMusic = function() {
+CY_Scene_Title.prototype.playTitleMusic = function () {
     AudioManager.playBgm($dataSystem.titleBgm);
     AudioManager.stopBgs();
     AudioManager.stopMe();

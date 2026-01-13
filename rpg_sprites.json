@@ -16,5 +16,6 @@
   "js/rpg_sprites/sprite_destination.js",
   "js/rpg_sprites/spriteset_base.js",
   "js/rpg_sprites/spriteset_map.js",
+  "js/rpg_sprites/spriteset_impact.js",
   "js/rpg_sprites/spriteset_battle.js"
 ]

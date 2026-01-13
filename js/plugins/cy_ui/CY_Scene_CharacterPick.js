@@ -29,16 +29,16 @@ CY_Window_CharPickActions.prototype = Object.create(CY_Window_Selectable.prototy
 CY_Window_CharPickActions.prototype.constructor = CY_Window_CharPickActions;
 
 CY_Window_CharPickActions.prototype.initialize = function (x, y, width, height) {
-    this._commands = ['NEXT', 'SELECT'];
+    this._commands = ['PREV', 'SELECT', 'NEXT'];
     CY_Window_Selectable.prototype.initialize.call(this, x, y, width, height);
     this.refresh();
-    this.select(0);
-    this.activate(); // Ensure active state
-    this.setBackgroundType(2); // Transparent
+    this.select(1); // Default to SELECT (middle)
+    this.activate();
+    this.setBackgroundType(2);
 };
 
 CY_Window_CharPickActions.prototype.maxCols = function () {
-    return 2;
+    return 3;
 };
 
 CY_Window_CharPickActions.prototype.maxItems = function () {
@@ -66,7 +66,7 @@ CY_Window_CharPickActions.prototype.drawItem = function (index) {
     var rect = this.itemRect(index);
     var isSelected = (index === this.index());
 
-    this.contents.fontSize = 24;
+    this.contents.fontSize = 24; // Slightly smaller to fit 3
 
     if (isSelected) {
         this.changeTextColor(CY_System.Colors.cyan || '#00FFFF');
@@ -202,12 +202,57 @@ CY_Scene_CharacterPick.prototype.create = function () {
     CY_Scene_MenuBase.prototype.create.call(this);
     this.createSpriteset();
     this.createTitleBar();
+    this.createDecorations(); // New Bottom Left Gizmo
     this.createTeamList();
     this.createCharacterSprite();
     this.createRightPanel();
     this.createCommandWindow();
 
     this.refreshInfo();
+};
+
+CY_Scene_CharacterPick.prototype.createDecorations = function () {
+    this._decorationContainer = new PIXI.Container();
+    this._decorationContainer.x = 40;
+    this._decorationContainer.y = Graphics.height - 100; // Bottom left area
+    this.addChild(this._decorationContainer);
+
+    // --- Logo (M shape) ---
+    var logo = new PIXI.Graphics();
+    logo.lineStyle(2, 0x882222); // Reddish
+
+    // Draw M-like shape with lines
+    // Left Triangle
+    logo.moveTo(0, 80);
+    logo.lineTo(30, 20);
+    logo.lineTo(60, 80);
+    logo.lineTo(0, 80);
+
+    // Right Triangle (Intersecting)
+    logo.moveTo(30, 80);
+    logo.lineTo(60, 20);
+    logo.lineTo(90, 80);
+    logo.lineTo(30, 80);
+
+    // Inner lines (Decoration)
+    logo.moveTo(15, 50); logo.lineTo(45, 50);
+    logo.moveTo(45, 50); logo.lineTo(75, 50);
+
+    this._decorationContainer.addChild(logo);
+
+    // --- Text ---
+    var style = {
+        fontFamily: "GameFont",
+        fontSize: 14,
+        fill: 0x882222,
+        align: "left",
+        lineHeight: 18
+    };
+
+    var text = new PIXI.Text("Project Egg\nBattlers\nDatabase", style);
+    text.x = 100;
+    text.y = 20;
+    this._decorationContainer.addChild(text);
 };
 
 CY_Scene_CharacterPick.prototype.createSpriteset = function () {
@@ -511,7 +556,8 @@ CY_SpineAvatar.prototype.setSpine = function (key, anim, maxWidth, maxHeight) {
 
 CY_SpineAvatar.prototype.update = function () {
     if (this._spine) {
-        this._spine.update(1.0 / 60.0);
+        // Reduced delta to 0.008 (approx 1/120) to slow down animation as requested.
+        this._spine.update(0.008);
     }
 };
 
@@ -604,7 +650,7 @@ CY_Scene_CharacterPick.prototype.createRightPanel = function () {
 //-----------------------------------------------------------------------------
 
 CY_Scene_CharacterPick.prototype.createCommandWindow = function () {
-    var w = 360;
+    var w = 460;
     var h = 80; // fitting height for 1 row is small, but let's give it space
     var x = Graphics.width - w - 40;
     var y = Graphics.height - h - 20;
@@ -620,10 +666,21 @@ CY_Scene_CharacterPick.prototype.createCommandWindow = function () {
 CY_Scene_CharacterPick.prototype.onCommandOk = function () {
     var index = this._commandWindow.index();
     if (index === 0) {
-        this.onNext();
-    } else {
+        // PREV
+        this.onPrev();
+    } else if (index === 1) {
+        // SELECT
         this.onSelect();
+    } else {
+        // NEXT
+        this.onNext();
     }
+};
+
+CY_Scene_CharacterPick.prototype.onPrev = function () {
+    this._currentIndex = (this._currentIndex - 1 + this._characters.length) % this._characters.length;
+    this.refreshInfo();
+    this._commandWindow.activate();
 };
 
 CY_Scene_CharacterPick.prototype.onNext = function () {
@@ -673,13 +730,13 @@ CY_Scene_CharacterPick.prototype.refreshInfo = function () {
     var char = this._characters[this._currentIndex];
 
     // 0. Update Debug Border (Ensure it exists for visibility check)
-    if (!this._debugRect) {
-        this._debugRect = new PIXI.Graphics();
-        this.addChild(this._debugRect);
-    }
-    this._debugRect.clear();
-    this._debugRect.lineStyle(2, 0x00FF00, 1);
-    this._debugRect.drawRect(this._charArea.x, this._charArea.y, this._charArea.w, this._charArea.h);
+    // if (!this._debugRect) {
+    //     this._debugRect = new PIXI.Graphics();
+    //     this.addChild(this._debugRect);
+    // }
+    // this._debugRect.clear();
+    // this._debugRect.lineStyle(2, 0x00FF00, 1);
+    // this._debugRect.drawRect(this._charArea.x, this._charArea.y, this._charArea.w, this._charArea.h);
 
 
     // --- SPINE INTEGRATION ---

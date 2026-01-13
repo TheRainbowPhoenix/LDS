@@ -1,5 +1,5 @@
 import { Attachment } from './Attachment';
-import { AttachmentType, ArrayLike, Color, TextureRegion, Utils, IRegionAttachment } from '@pixi-spine/base';
+import { AttachmentType, type ArrayLike, Color, TextureRegion, Utils, type IRegionAttachment } from '../../../base';
 
 import type { Bone } from '../Bone';
 import { Slot } from '../Slot';

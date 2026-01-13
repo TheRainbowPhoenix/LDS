@@ -1,5 +1,5 @@
-import { IAnimationState, IAnimationStateListener, ITrackEntry, MathUtils, MixBlend, MixDirection, Pool, IntSet, Utils } from '@pixi-spine/base';
-import { Animation, AttachmentTimeline, DrawOrderTimeline, RotateTimeline, Timeline } from './Animation';
+import { type IAnimationState, type IAnimationStateListener, type ITrackEntry, MathUtils, MixBlend, MixDirection, Pool, IntSet, Utils } from '../../base';
+import { Animation, AttachmentTimeline, DrawOrderTimeline, RotateTimeline, type Timeline } from './Animation';
 import type { AnimationStateData } from './AnimationStateData';
 import type { Event } from './Event';
 import type { Skeleton } from './Skeleton';

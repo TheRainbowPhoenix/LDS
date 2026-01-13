@@ -1,7 +1,7 @@
 import type { Event } from './Event';
 import type { Skeleton } from './Skeleton';
 import { Attachment, VertexAttachment } from './attachments';
-import { ArrayLike, MathUtils, Utils, MixBlend, MixDirection, type IAnimation, type ITimeline } from '../../base';
+import { type ArrayLike, MathUtils, Utils, MixBlend, MixDirection, type IAnimation, type ITimeline } from '../../base';
 import type { Slot } from './Slot';
 import type { IkConstraint } from './IkConstraint';
 import type { TransformConstraint } from './TransformConstraint';

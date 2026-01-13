@@ -28,7 +28,7 @@ import {
     TranslateTimeline,
     TwoColorTimeline,
 } from './Animation';
-import { ArrayLike, Color, Utils, PositionMode, RotateMode, TransformMode, settings } from '@pixi-spine/base';
+import { type ArrayLike, Color, Utils, PositionMode, RotateMode, TransformMode, settings } from '../../base';
 import { BLEND_MODES } from '@pixi/core';
 
 /**

@@ -3,12 +3,17 @@ import { type SpineData, type BoneData, type AtlasData, type AtlasRegion, Attach
 import { skeletonData, selectedNode, currentTool, renderingScale, addHistory } from './Store';
 import { get } from 'svelte/store';
 
+// Helper for Spine vs Pixi Rotation
+const DEG_TO_RAD = Math.PI / 180;
+
 export class SpineRenderer {
     app: PIXI.Application;
     rootContainer: PIXI.Container;
     skeletonContainer: PIXI.Container;
-    slotContainer: PIXI.Container;
     gizmoContainer: PIXI.Container;
+
+    // Slots are now managed via a container per slot
+    slotContainers = new Map<string, PIXI.Container>();
 
     // Gizmos
     translateGizmo: PIXI.Container;
@@ -22,8 +27,8 @@ export class SpineRenderer {
 
     // State
     currentBone: BoneData | null = null;
+    // Map of BoneName -> PIXI Container. This represents the Bone in the Viewport.
     boneContainers = new Map<string, PIXI.Container>();
-    slotSprites = new Map<string, PIXI.Sprite | PIXI.Container>();
 
     isDragging = false;
     dragType: 'translate' | 'rotate' | 'scale' | null = null;
@@ -42,21 +47,24 @@ export class SpineRenderer {
             autoDensity: true
         });
 
-        // Hierarchy: Stage -> Root -> [Slots, Skeleton(Debug), Gizmos]
+        // Hierarchy: Stage -> Root -> [Slots(Z-Ordered), Skeleton(Debug), Gizmos]
         this.rootContainer = new PIXI.Container();
         this.rootContainer.position.set(this.app.renderer.width / 2, this.app.renderer.height * 0.8);
-        this.rootContainer.scale.set(1, -1);
+        this.rootContainer.scale.set(1, -1); // Y Up for Spine
         this.app.stage.addChild(this.rootContainer);
-
-        this.slotContainer = new PIXI.Container();
-        this.slotContainer.name = 'slots';
-        this.rootContainer.addChild(this.slotContainer);
 
         this.skeletonContainer = new PIXI.Container();
         this.skeletonContainer.name = 'skeleton-debug';
-        this.rootContainer.addChild(this.skeletonContainer);
+
+        // We will add slot containers directly to RootContainer in draw order, 
+        // to mimic Spine's rendering order.
 
         this.gizmoContainer = new PIXI.Container();
+
+        // Layout: Slots first (bottom), then Skeleton Debug, then Gizmos
+        // Since we add slots dynamically, we might need a dedicated container for them to keep order?
+        // Let's use a container for all slots to easily manage z-order relative to debug bones.
+        this.rootContainer.addChild(this.skeletonContainer);
         this.rootContainer.addChild(this.gizmoContainer);
 
         this.createGizmos();
@@ -70,8 +78,10 @@ export class SpineRenderer {
             .on('pointermove', this.onDragMove.bind(this));
 
         window.addEventListener('resize', () => {
-            this.app.renderer.resize(canvas.offsetWidth, canvas.offsetHeight);
-            this.rootContainer.position.set(this.app.renderer.width / 2, this.app.renderer.height * 0.8);
+            if (canvas && canvas.parentElement) {
+                this.app.renderer.resize(canvas.parentElement.offsetWidth, canvas.parentElement.offsetHeight);
+                this.rootContainer.position.set(this.app.renderer.width / 2, this.app.renderer.height * 0.8);
+            }
         });
 
         this.setupInputListeners(canvas);
@@ -104,6 +114,7 @@ export class SpineRenderer {
     createGizmos() {
         // --- TRANSLATE GIZMO ---
         this.translateGizmo = new PIXI.Container();
+        // X
         const trArrowX = new PIXI.Graphics();
         trArrowX.lineStyle(2, 0xFF0000, 1);
         trArrowX.moveTo(0, 0).lineTo(60, 0);
@@ -118,7 +129,7 @@ export class SpineRenderer {
         trArrowX.buttonMode = true;
         trArrowX.on('pointerdown', (e: any) => this.onDragStart(e, 'translate', 'x'));
         this.translateGizmo.addChild(trArrowX);
-
+        // Y
         const trArrowY = new PIXI.Graphics();
         trArrowY.lineStyle(2, 0x00FF00, 1);
         trArrowY.moveTo(0, 0).lineTo(0, 60);
@@ -133,7 +144,7 @@ export class SpineRenderer {
         trArrowY.buttonMode = true;
         trArrowY.on('pointerdown', (e: any) => this.onDragStart(e, 'translate', 'y'));
         this.translateGizmo.addChild(trArrowY);
-
+        // Center
         const trCenter = new PIXI.Graphics();
         trCenter.beginFill(0xFFFF00);
         trCenter.drawRect(-6, -6, 12, 12);
@@ -151,7 +162,6 @@ export class SpineRenderer {
         rotCircle.interactive = true;
         rotCircle.buttonMode = true;
         rotCircle.on('pointerdown', (e: any) => this.onDragStart(e, 'rotate', 'both'));
-
         const pieVis = new PIXI.Graphics();
         pieVis.name = 'pie';
         this.rotateGizmo.addChild(pieVis);
@@ -159,6 +169,7 @@ export class SpineRenderer {
 
         // --- SCALE GIZMO ---
         this.scaleGizmo = new PIXI.Container();
+        // X
         const scArrowX = new PIXI.Graphics();
         scArrowX.lineStyle(2, 0xFF0000, 1);
         scArrowX.moveTo(0, 0).lineTo(50, 0);
@@ -170,7 +181,7 @@ export class SpineRenderer {
         scArrowX.hitArea = new PIXI.Rectangle(0, -10, 65, 20);
         scArrowX.on('pointerdown', (e: any) => this.onDragStart(e, 'scale', 'x'));
         this.scaleGizmo.addChild(scArrowX);
-
+        // Y
         const scArrowY = new PIXI.Graphics();
         scArrowY.lineStyle(2, 0x00FF00, 1);
         scArrowY.moveTo(0, 0).lineTo(0, 50);
@@ -333,11 +344,9 @@ export class SpineRenderer {
     async loadTexture(atlas: AtlasData, imageUrl: string) {
         this.atlas = atlas;
 
-        // Load image manually to bypass Pixi V4 URL parsing issues in Vite
         const img = new Image();
         img.crossOrigin = "anonymous";
         img.src = imageUrl;
-
         await new Promise((resolve, reject) => {
             img.onload = resolve;
             img.onerror = reject;
@@ -347,8 +356,11 @@ export class SpineRenderer {
 
         this.regions.clear();
         atlas.regions.forEach(region => {
-            // If rotated, the dimensions in the atlas are swapped (Height becomes Width).
-            // region.width/height from parser are the 'size' line, which lists unrotated logical size.
+            // Spine rotate=true means the region in texture is 90 deg Clockwise.
+            // Width and Height in atlas parameters are unrotated logical size.
+            // Width/Height in image are swapped.
+
+            // Pixi Texture Frame must match the rectangular area on the base texture.
             const frameW = region.rotate ? region.height : region.width;
             const frameH = region.rotate ? region.width : region.height;
 
@@ -356,8 +368,9 @@ export class SpineRenderer {
 
             let tex: PIXI.Texture;
             if (region.rotate) {
-                // Spine rotate=true means the region is stored rotated 90 deg CW.
-                // Pixi Texture rotate: 2 = 90 deg CW, 6 = 90 deg CCW
+                // To display it correctly, we need to counter-rotate it.
+                // Pixi GroupD8: 2 is 90 CW. 6 is 90 CCW.
+                // We use 6 to rotate it back to upright.
                 tex = new PIXI.Texture(
                     this.baseTexture!,
                     rect,
@@ -366,6 +379,25 @@ export class SpineRenderer {
                     6
                 );
             } else {
+                // If not rotated, we still need to provide orig/trim info for offsetting/stripping
+                // Atlas values:
+                // originalWidth/Height: The full size before trimming.
+                // offsetX/Y: The offset of the trimmed image from bottom-left (Spine) or top-left?
+                // Spine Atlas offsets are usually: offset from bottom left of original image.
+                // Textures usually pivot top-left.
+
+                // Spine offsets are: x,y from the bottom left of the original image...
+                // Wait, Spine documentation says: "xy: offsets from bottom left of original image to bottom left of packed image."
+                // Pixi Trim: x,y from top left.
+
+                // For MVP, standard Texture works reasonably well, but let's try to pass the trim data.
+
+                // Note: PIXI.Texture(base, frame, orig, trim)
+                // orig: The original size
+                // trim: The rectangle of the cropped image within the original
+
+                // We don't have the 'trim' rectangle explicitly in atlas, we have offsets.
+                // Let's stick to simple Texture for unrotated for safety unless we see alignment issues.
                 tex = new PIXI.Texture(this.baseTexture!, rect);
             }
             this.regions.set(region.name, tex);
@@ -378,61 +410,91 @@ export class SpineRenderer {
 
     loadSkeleton(data: SpineData) {
         this.skeletonContainer.removeChildren();
-        this.slotContainer.removeChildren();
+        // Remove existing slot containers
+        this.slotContainers.forEach(c => this.rootContainer.removeChild(c));
+        this.slotContainers.clear();
         this.boneContainers.clear();
-        this.slotSprites.clear();
 
-        // 1. Bones
+        // 1. Create Bones (Debug Visuals + Hierarchy)
+        // Hierarchy is important for calculating 'worldTransform'
         data.bones.forEach(bone => {
             const container = new PIXI.Container();
             container.name = bone.name;
             const gr = this.createBoneGraphics(bone);
             if (gr) container.addChild(gr);
             this.boneContainers.set(bone.name, container);
+
             if (bone.parent) {
                 const parent = this.boneContainers.get(bone.parent);
                 if (parent) parent.addChild(container);
             } else {
-                this.skeletonContainer.addChild(container);
+                this.skeletonContainer.addChild(container); // Add root bone to debug container
             }
         });
 
-        // 2. Slots
-        data.slots.forEach(slot => {
-            let attachmentName = slot.attachment;
-            let attachment: any = null;
+        // 2. Create Slots and their Containers
+        // In Spine, slots are drawn in a specific order (draw order).
+        // Each Slot is attached to a Bone, meaning it moves with the Bone.
+        // We create a PIXI Container for each Slot and add it to the Root.
+        // We will manually update the SlotContainer's transform to match the Bone's World Transform.
 
+        data.slots.forEach(slot => {
+            const slotContainer = new PIXI.Container();
+            slotContainer.name = `slot-${slot.name}`;
+
+            // Add to root, but strictly ordered? 
+            // We should add them in the order of 'data.slots' (or drawOrder).
+            // For now assuming data.slots is the Draw Order initially.
+            this.rootContainer.addChildAt(slotContainer, 0); // Add to bottom? No, we iterate 0..N
+            // Actually, we should add them in order. 
+            // Since we cleared children, we can just addChild.
+            // Wait, skeletonContainer is already added. We want slots BEHIND debug skeleton?
+            // Root children: [Slot1, Slot2, ..., SkeletonDebug, Gizmos]
+
+            // Let's defer adding to root until AFTER the loop
+            this.slotContainers.set(slot.name, slotContainer);
+
+            // Find Attachment
+            let attachmentName = slot.attachment;
             const defaultSkin = data.skins.find(s => s.name === "default");
+            let attachment: any = null;
             if (defaultSkin && attachmentName) {
                 const slotAtts = defaultSkin.attachments.get(slot.name);
-                if (slotAtts) {
-                    attachment = slotAtts.get(attachmentName);
-                }
+                if (slotAtts) attachment = slotAtts.get(attachmentName);
             }
-
-            // Fallback for non-regions: Use Sprite or Container
-            const sprite = new PIXI.Sprite();
-            sprite.name = slot.name;
 
             if (attachment && (attachment.type === AttachmentType.Region || attachment.type === AttachmentType.Mesh || attachment.type === AttachmentType.LinkedMesh)) {
                 const path = (attachment as any).path || attachment.name;
                 const tex = this.regions.get(path) || this.regions.get(attachment.name);
-                if (tex) {
-                    sprite.texture = tex;
-                }
-                sprite.anchor.set(0.5, 0.5);
-                (sprite as any).attachment = attachment;
-                (sprite as any).boneName = slot.bone;
 
-                this.slotContainer.addChild(sprite);
-                this.slotSprites.set(slot.name, sprite);
+                if (tex) {
+                    const sprite = new PIXI.Sprite(tex);
+                    sprite.name = attachment.name;
+                    // Store attachment data on sprite for later updates
+                    (sprite as any).attachment = attachment;
+
+                    // Add to Slot Container
+                    slotContainer.addChild(sprite);
+                }
             }
         });
+
+        // Re-order children in Root
+        // 1. Slots
+        data.slots.forEach(slot => {
+            const c = this.slotContainers.get(slot.name);
+            if (c) this.rootContainer.addChild(c);
+        });
+        // 2. Skeleton Debug
+        this.rootContainer.addChild(this.skeletonContainer);
+        // 3. Gizmos
+        this.rootContainer.addChild(this.gizmoContainer);
 
         this.updateTransformFromData();
     }
 
     createBoneGraphics(bone: BoneData): PIXI.Graphics | null {
+        // ... (Same as before)
         const gr = new PIXI.Graphics();
         const color = bone.length > 0 ? 0x999999 : 0x0088FF;
         gr.name = 'visual';
@@ -464,62 +526,91 @@ export class SpineRenderer {
         const data = get(skeletonData);
         if (!data) return;
 
-        // 1. Update Bones from Stores (or internal state if dragging)
+        // 1. Update Bones (Local Transforms)
         data.bones.forEach(bone => {
             const c = this.boneContainers.get(bone.name);
             if (c) {
                 c.position.set(bone.x, bone.y);
-                c.rotation = bone.rotation * (Math.PI / 180);
+                c.rotation = bone.rotation * DEG_TO_RAD;
                 c.scale.set(bone.scaleX ?? 1, bone.scaleY ?? 1);
-                c.skew.set(bone.shearX * (Math.PI / 180) || 0, bone.shearY * (Math.PI / 180) || 0);
+                c.skew.set(bone.shearX * DEG_TO_RAD || 0, bone.shearY * DEG_TO_RAD || 0);
             }
         });
 
-        // 3. Force World Transforms
+        // 2. Force World Transforms calculation (Pixi Scene Graph)
+        // This propagates transforms down the bone hierarchy.
         this.skeletonContainer.updateTransform();
 
-        // 4. Slots
-        // We need the inverse of the RootWorldTransform to convert BoneWorldTransform back to "Root Local Space"
-        // This effectively gives us the Bone's transform relative to the Root.
-        // Since SlotContainer is a direct child of Root (and usually Identity), this puts the Slot in the correct place relative to the Skeleton.
+        // Root Inverse for creating "Skeleton-Relative" transforms
+        // We want Slot Containers to be positioned relative to Skeleton Origin.
+        // Skeleton Origin is RootContainer's (0,0).
+        // Since SlotContainers are children of RootContainer, we just need to set their
+        // LocalTransform to equal the Bone's WorldTransform relative to RootContainer.
+
         const rootInv = this.rootContainer.worldTransform.clone().invert();
 
-        this.slotSprites.forEach((sprite, slotName) => {
-            const attachment = (sprite as any).attachment;
-            const boneName = (sprite as any).boneName;
+        // 3. Update Slots
+        data.slots.forEach(slot => {
+            const slotContainer = this.slotContainers.get(slot.name);
+            const boneBin = this.boneContainers.get(slot.bone);
 
-            if (attachment && boneName) {
-                const boneBin = this.boneContainers.get(boneName);
-                if (boneBin) {
-                    // 1. Get Bone World Matrix
-                    const boneWorld = boneBin.worldTransform;
+            if (slotContainer && boneBin) {
+                // Determine Bone's relative transform to Root
+                // relative = RootInv * BoneTotalWorld
+                const boneWorld = boneBin.worldTransform; // Global
+                const relativeBoneMatrix = rootInv.clone().append(boneWorld);
 
-                    // 2. Convert to Root Local Space (Bone Relative Matrix)
-                    // relative = rootInv * boneWorld
-                    // Pixi Matrix.append: A.append(B) => A * B
-                    const boneRel = rootInv.clone().append(boneWorld);
+                // Set SlotContainer transform to match Bone's relative transform
+                // Pixi allows setting local transform directly if we access the TransformBase
+                // However, assigning to 'position', 'scale', 'rotation' decomposes the matrix which can be lossy or ambiguous.
+                // Better to set the matrix directly if possible, or decompose carefully.
+                // For Pixi V5+ this is tricky. 
+                // But wait, PIXI Containers update their worldTransform from (pos, rot, scale).
+                // If we want to force a specific local matrix, we can use `transform.setFromMatrix` (Available in some versions)
+                // Or we decompose.
 
-                    // 3. Attachment Local Matrix
-                    const localMat = new PIXI.Matrix();
+                // Let's use setFromMatrix as it is standard in modern Pixi
+                (slotContainer.transform as any).setFromMatrix(relativeBoneMatrix);
 
-                    // Spine specific: Flip Y scale for Region attachments to render right-side up in our Y-flipped root world.
-                    // Also negative rotation usually? Spine is CCW. Pixi is CW. 
-                    // But we are in a flipped Y container, which flips rotation direction visually.
-                    // Testing: Keep rotation positive (Spine degrees), Flip Scale Y.
+                // Now update the Sprite inside (Attachment Transform)
+                if (slotContainer.children.length > 0) {
+                    const sprite = slotContainer.children[0] as PIXI.Sprite;
+                    const attachment = (sprite as any).attachment;
+                    if (attachment) {
+                        // Apply attachment properties to Sprite Local Transform
+                        sprite.position.set(attachment.x || 0, attachment.y || 0);
 
-                    localMat.scale(attachment.scaleX || 1, -(attachment.scaleY || 1));
-                    localMat.rotate((attachment.rotation || 0) * (Math.PI / 180));
-                    localMat.translate(attachment.x || 0, attachment.y || 0);
+                        // Rotations in Spine are CCW degrees. Pixi is CW Radians.
+                        // However, we are in a Y-Flipped Root Container (scale(1, -1)).
+                        // This flips the visual direction of rotation.
+                        // Standard Spine Runtime logic for Y-Down:
+                        // Rotation is applied as positive.
+                        sprite.rotation = (attachment.rotation || 0) * DEG_TO_RAD;
 
-                    // 4. Combine: Final = BoneRel * AttachmentLocal
-                    // Pixi: localMat.prepend(boneRel) => boneRel * localMat
-                    const result = localMat.prepend(boneRel);
+                        // Scale
+                        // Scale Y is flipped in Spine Runtime for RegionAttachments to standardise Y-Up?
+                        // Spine Runtime Code: sprite.scale.y = -attachment.scaleY ...
+                        // This is likely because the Region texture is usually Y-down (image), but attachment space is Y-up.
+                        sprite.scale.set(
+                            attachment.scaleX || 1,
+                            -(attachment.scaleY || 1)
+                        );
 
-                    (sprite.transform as PIXI.Transform).setFromMatrix(result);
-                    sprite.visible = true;
+                        // Width/Height correction for Trimmed textures
+                        // If texture is trimmed, the sprite size is smaller than attachment size.
+                        // We must scale it up.
+                        if (sprite.texture && sprite.texture.orig) {
+                            const regionOriginalW = sprite.texture.orig.width;
+                            const regionOriginalH = sprite.texture.orig.height;
+                            const attachmentW = (attachment as any).width || regionOriginalW;
+                            const attachmentH = (attachment as any).height || regionOriginalH;
+
+                            // Additional scaling factor
+                            sprite.scale.x *= (attachmentW / regionOriginalW);
+                            sprite.scale.y *= (attachmentH / regionOriginalH);
+                        }
+                    }
                 }
-            } else {
-                sprite.visible = false;
             }
         });
 
@@ -533,18 +624,31 @@ export class SpineRenderer {
             const worldPos = container.getGlobalPosition();
             const localPos = this.rootContainer.toLocal(worldPos);
             this.gizmoContainer.position.set(localPos.x, localPos.y);
+
+            // Calculate Global Rotation for gizmo alignment? 
+            // Or just keep gizmo axis-aligned? 
+            // Usually gizmos rotate with the object if "Local" mode, or stay 0 if "World" mode.
+            // Let's stick to World Alignment for Gizmo parent, but maybe position is enough.
+            // If we want rotation:
             if (container.parent) {
-                const g0 = container.parent.toGlobal(new PIXI.Point(0, 0));
-                const g1 = container.parent.toGlobal(new PIXI.Point(100, 0));
-                const r0 = this.rootContainer.toLocal(g0);
-                const r1 = this.rootContainer.toLocal(g1);
-                this.gizmoContainer.rotation = Math.atan2(r1.y - r0.y, r1.x - r0.x);
-            } else {
-                this.gizmoContainer.rotation = 0;
+                // Simple approx of rotation
+                const p1 = container.toGlobal(new PIXI.Point(0, 0));
+                const p2 = container.toGlobal(new PIXI.Point(10, 0));
+                const dx = p2.x - p1.x;
+                const dy = p2.y - p1.y;
+                this.gizmoContainer.rotation = Math.atan2(dy, dx);
+                // Correction for Y-flip root?
+                // Math.atan2 gives screen space rotation. 
+                // Gizmo container is in Root (Flipped).
+                // We need to convert screen rotation to Root rotation.
+                // If Root is Y-flipped, a CW screen rotation is CCW root rotation?
+                const p1L = this.rootContainer.toLocal(p1);
+                const p2L = this.rootContainer.toLocal(p2);
+                this.gizmoContainer.rotation = Math.atan2(p2L.y - p1L.y, p2L.x - p1L.x);
             }
         }
     }
-
+    // ... select, hide, show gizmo methods copy-pasted or unchanged ... 
     selectBone(name: string) {
         if (this.currentBone) {
             const oldC = this.boneContainers.get(this.currentBone.name);

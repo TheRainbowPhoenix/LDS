@@ -66,7 +66,7 @@ CY_Window_CharPickActions.prototype.drawItem = function (index) {
     var rect = this.itemRect(index);
     var isSelected = (index === this.index());
 
-    this.contents.fontSize = 24; // Slightly smaller to fit 3
+    this.contents.fontSize = 22; // Slightly smaller to fit 3
 
     if (isSelected) {
         this.changeTextColor(CY_System.Colors.cyan || '#00FFFF');
@@ -132,6 +132,26 @@ CY_Scene_CharacterPick.prototype.initialize = function () {
     this._characters = this.getCharacterData();
     this._currentIndex = 0;
     this._selectedRecruits = [];
+
+    // --- Layout Scaling ---
+    var w = Graphics.width;
+    var h = Graphics.height;
+
+    // Default reference resolution: 1920x1080
+    // Trigger scaling if width < 1600 OR height < 800
+    this._uiScale = 1.0;
+
+    if (w < 1600 || h < 800) {
+        // Calculate ratio
+        // We want to scale down fairly aggressively if it's small (e.g. 1280x720)
+        // 1280 / 1920 = 0.66
+        var scaleW = w / 1920;
+        var scaleH = h / 1080;
+        this._uiScale = Math.min(scaleW, scaleH);
+
+        // Ensure it doesn't get too tiny or weird
+        this._uiScale = Math.max(0.6, this._uiScale);
+    }
 };
 
 CY_Scene_CharacterPick.prototype.getCharacterData = function () {
@@ -213,8 +233,11 @@ CY_Scene_CharacterPick.prototype.create = function () {
 
 CY_Scene_CharacterPick.prototype.createDecorations = function () {
     this._decorationContainer = new PIXI.Container();
-    this._decorationContainer.x = 40;
-    this._decorationContainer.y = Graphics.height - 100; // Bottom left area
+    this._decorationContainer.scale.set(this._uiScale);
+
+    this._decorationContainer.x = 40 * this._uiScale;
+    this._decorationContainer.y = Graphics.height - (100 * this._uiScale); // Scale margin too
+
     this.addChild(this._decorationContainer);
 
     // --- Logo (M shape) ---
@@ -318,7 +341,7 @@ CY_Scene_CharacterPick.prototype.drawTitleBar = function () {
 
     // Draw title text centered
     bmp.fontFace = 'GameFont';
-    bmp.fontSize = 24;
+    bmp.fontSize = 24 * this._uiScale;
     bmp.textColor = CY_System.Colors.white;
     bmp.drawText("RECRUIT TEAM", 0, 8, w, h - 10, 'center');
 
@@ -334,8 +357,18 @@ CY_Scene_CharacterPick.prototype.drawTitleBar = function () {
 CY_Scene_CharacterPick.prototype.createTeamList = function () {
     var titleH = CY_Scene_MenuBase.TOP_BAR_HEIGHT;
     this._teamListContainer = new PIXI.Container();
-    this._teamListContainer.x = 40;
-    this._teamListContainer.y = titleH + 20;
+
+    // Base position
+    var baseX = 40;
+    var baseY = titleH + 20;
+
+    this._teamListContainer.x = baseX * this._uiScale;
+    this._teamListContainer.y = baseY; // Keep Y relative to top bar mostly
+
+    // Scale the entire container
+    // But wait, if we scale the container, the text inside scales too, which is what we want.
+    this._teamListContainer.scale.set(this._uiScale);
+
     this.addChild(this._teamListContainer);
 
     this.refreshTeamList();
@@ -347,7 +380,7 @@ CY_Scene_CharacterPick.prototype.refreshTeamList = function () {
     // "TEAM" Header
     var headerStyle = {
         fontFamily: "GameFont",
-        fontSize: 24,
+        fontSize: 24 * this._uiScale,
         fill: 0xFF5555, // Light red
         align: "center"
     };
@@ -565,10 +598,13 @@ CY_SpineAvatar.prototype.update = function () {
 CY_Scene_CharacterPick.prototype.createCharacterSprite = function () {
     // 1. Calculate Available Area
     var topBarBottom = CY_Scene_MenuBase.TOP_BAR_HEIGHT + 20;
-    var teamListRight = 40 + 100 + 40;
 
-    var panelW = 450;
-    var rightPanelX = Graphics.width - panelW - 40;
+    var margin = 40 * this._uiScale;
+    var teamListW = 100 * this._uiScale; // approximate width of the list visual
+    var teamListRight = margin + teamListW + margin;
+
+    var panelW = 450 * this._uiScale;
+    var rightPanelX = Graphics.width - panelW - margin;
 
     this._charArea = {
         x: teamListRight,
@@ -597,36 +633,76 @@ CY_Scene_CharacterPick.prototype.createCharacterSprite = function () {
 //-----------------------------------------------------------------------------
 
 CY_Scene_CharacterPick.prototype.createRightPanel = function () {
-    var panelW = 450;
-    var panelH = Graphics.height * 0.7; // 70% height
-    var x = Graphics.width - panelW - 40;
+    // Base dimensions
+    var basePanelW = 450;
+    var panelW = basePanelW * this._uiScale;
+
+    var panelH = Graphics.height * 0.7; // Height relative to screen is fine
+    // x = Width - panelW - margin
+    var margin = 40 * this._uiScale;
+
+    var x = Graphics.width - panelW - margin;
     var y = (Graphics.height - panelH) / 2 + 20;
 
     this._infoContainer = new PIXI.Container();
     this._infoContainer.x = x;
     this._infoContainer.y = y;
+
+    // Scale internal contents? 
+    // If we just scale the container, we might distort borders if not careful, 
+    // but here we are drawing logical sizes.
+    // Let's draw using the 'panelW' we calculated, but scale the text?
+    // Actually, simpler to just set .scale on container for content, 
+    // BUT we want the panel to fill the calculated W.
+
+    // Strategy: Pass the scaled width to drawing logic.
+    // Text scale: The text sizes are hardcoded (size 14, 40, etc).
+    // We should probably scale the container to keep text proportional.
+
+    // Let's create content as if it is 450px wide, and scale the container down.
+    this._infoContainer.scale.set(this._uiScale);
+
+    // Re-calculate X/Y because of scale
+    // If container is scaled, its visual width is internalWidth * scale.
+    // We want visual width to be panelW.
+    // So internalWidth should be basePanelW (450).
+    // so x position should be:
+    // x = Graphics.width - (basePanelW * scale) - (40 * scale)
+
+    this._infoContainer.x = Graphics.width - (basePanelW * this._uiScale) - (40 * this._uiScale);
+    // Y needs to center based on scaled height?
+    // Visual Height = panelH_logical * scale
+    // panelH_logical = (Graphics.height * 0.7) / scale ? 
+    // No, simpler: Let's determine the visual height we want (70% of screen).
+    // So internal height must be screenHeight * 0.7 / scale.
+
+    var visualH = Graphics.height * 0.7;
+    var internalH = visualH / this._uiScale;
+
+    this._infoContainer.y = (Graphics.height - visualH) / 2 + 20;
+
     this.addChild(this._infoContainer);
 
-    // 1. Panel Background
-    // Color: #0E0E18, Left Border: #441618 (4px) or user requested 24px left padding styling?
+    // Pass these to drawing (internal coordinates)
+    this.drawRightPanelBg(basePanelW, internalH); // Refactored drawing
+};
 
+CY_Scene_CharacterPick.prototype.drawRightPanelBg = function (w, h) {
+    // 1. Panel Background
     this._panelBg = new PIXI.Graphics();
 
     var bgColor = parseInt("0E0E18", 16);
-    var redBorder = parseInt("441618", 16); // This is the "Left Red Padding" color or just border?
-    // Usually "Left Red Padding" means a thick stripe on the left.
-    // Let's assume the user wants a thick left border of 24px.
+    var redBorder = parseInt("441618", 16);
 
-    // Draw Main Background
     this._panelBg.beginFill(bgColor, 0.95);
-    this._panelBg.lineStyle(1, 0xFF0000, 0.3); // "very thin 0.5px red border" ~ 1px with alpha or 0.5 width
-    // PIXI line style 0.5 might be invisible on some renderers, using 1 with alpha
+    this._panelBg.lineStyle(1, 0xFF0000, 0.3);
+
     this._panelBg.drawPolygon([
         0, 0,
-        panelW, 0,
-        panelW, panelH - 12, // Cut corner
-        panelW - 12, panelH,
-        0, panelH,
+        w, 0,
+        w, h - 12,
+        w - 12, h,
+        0, h,
         0, 0
     ]);
     this._panelBg.endFill();
@@ -634,14 +710,14 @@ CY_Scene_CharacterPick.prototype.createRightPanel = function () {
     // Draw Thick Left Stripe (24px)
     this._panelBg.lineStyle(0);
     this._panelBg.beginFill(redBorder);
-    this._panelBg.drawRect(0, 0, 24, panelH);
+    this._panelBg.drawRect(0, 0, 24, h);
     this._panelBg.endFill();
 
     this._infoContainer.addChild(this._panelBg);
 
     // 2. Text Elements Container
     this._textContainer = new PIXI.Container();
-    this._textContainer.x = 34; // Offset text to right of the 24px red bar + padding
+    this._textContainer.x = 34;
     this._infoContainer.addChild(this._textContainer);
 };
 
@@ -650,12 +726,20 @@ CY_Scene_CharacterPick.prototype.createRightPanel = function () {
 //-----------------------------------------------------------------------------
 
 CY_Scene_CharacterPick.prototype.createCommandWindow = function () {
-    var w = 460;
-    var h = 80; // fitting height for 1 row is small, but let's give it space
-    var x = Graphics.width - w - 40;
-    var y = Graphics.height - h - 20;
+    var baseW = 460;
+    var baseH = 80;
 
+    // Scale size
+    var w = Math.max(350, baseW * this._uiScale);
+    var h = Math.max(60, baseH * this._uiScale);
+
+    var margin = 40; // * this._uiScale;
+    var x = Graphics.width - w - margin;
+    var y = Graphics.height - h - 20; // 20 fixed margin or scaled?
+
+    // Create window
     this._commandWindow = new CY_Window_CharPickActions(x, y, w, h);
+
     this._commandWindow.setHandler('ok', this.onCommandOk.bind(this));
     this._commandWindow.setHandler('cancel', this.popScene.bind(this));
 

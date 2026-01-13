@@ -76,25 +76,46 @@ export class SpineRenderer {
                 this.rootContainer.addChild(container);
             }
 
-            // Draw visual (Bone line)
+            // Draw visual (Bone shape)
             if (bone.length > 0) {
                 const gr = new PIXI.Graphics();
-                gr.lineStyle(2, this.hexToNumber(bone.color || "FF0000"), 1);
-                gr.moveTo(0, 0);
-                gr.lineTo(bone.length, 0); // Draw along local X
+                const color = this.hexToNumber(bone.color || "989898"); // Default gray if no color
 
-                // Add a small circle at the joint
-                gr.beginFill(0x00FF00);
-                gr.drawCircle(0, 0, 4);
+                // Draw Bone segment (Triangle-like shape)
+                gr.lineStyle(1.5, color, 1);
+                gr.beginFill(color, 0.3); // Semi-transparent fill
+
+                // Shape: Start at 0,0 -> go out a bit wide -> go to length -> back to base
+                const boneWidth = Math.min(bone.length / 5, 10); // Scale width with length but clamp it
+
+                gr.moveTo(0, 0);
+                gr.lineTo(boneWidth, -boneWidth);
+                gr.lineTo(bone.length, 0);
+                gr.lineTo(boneWidth, boneWidth);
+                gr.lineTo(0, 0);
+
+                gr.endFill();
+
+                // joint circle
+                gr.lineStyle(1, color, 1);
+                gr.beginFill(color);
+                gr.drawCircle(0, 0, 3);
                 gr.endFill();
 
                 container.addChild(gr);
             } else {
-                // Root/0-length bone marker
+                // Root/0-length bone marker (Crosshair or just circle)
                 const gr = new PIXI.Graphics();
-                gr.beginFill(0x0000FF);
-                gr.drawCircle(0, 0, 5);
-                gr.endFill();
+                const color = this.hexToNumber(bone.color || "0000FF");
+
+                gr.lineStyle(1, color, 1);
+                gr.drawCircle(0, 0, 4);
+
+                gr.moveTo(-5, 0);
+                gr.lineTo(5, 0);
+                gr.moveTo(0, -5);
+                gr.lineTo(0, 5);
+
                 container.addChild(gr);
             }
         });

@@ -56,7 +56,7 @@ CY_Window_TitleCommand._lastCommandSymbol = null;
 /**
  * Reset the last command position.
  */
-CY_Window_TitleCommand.initCommandPosition = function() {
+CY_Window_TitleCommand.initCommandPosition = function () {
     this._lastCommandSymbol = null;
 };
 
@@ -168,26 +168,26 @@ CY_Window_TitleCommand.prototype.callOkHandler = Window_Command.prototype.callOk
  * Initialize the Cyberpunk-styled title command window.
  * Requirement 4.2: Creates command list with all required commands
  */
-CY_Window_TitleCommand.prototype.initialize = function() {
+CY_Window_TitleCommand.prototype.initialize = function () {
     // Build command list first (needed for sizing)
     this.clearCommandList();
     this.makeCommandList();
-    
+
     // Calculate dimensions
     var width = this.windowWidth();
     var height = this.windowHeight();
-    
+
     // Initialize parent with calculated dimensions
     CY_Window_Selectable.prototype.initialize.call(this, 0, 0, width, height);
-    
+
     // Refresh contents and select first item
     this.refresh();
     this.select(0);
     this.activate();
-    
+
     // Position window on left side
     this.updatePlacement();
-    
+
     // Select last used command if available
     this.selectLast();
 };
@@ -200,7 +200,7 @@ CY_Window_TitleCommand.prototype.initialize = function() {
  * Get the window width.
  * @returns {number} Window width in pixels
  */
-CY_Window_TitleCommand.prototype.windowWidth = function() {
+CY_Window_TitleCommand.prototype.windowWidth = function () {
     return 280;
 };
 
@@ -208,7 +208,7 @@ CY_Window_TitleCommand.prototype.windowWidth = function() {
  * Get the window height based on number of commands.
  * @returns {number} Window height in pixels
  */
-CY_Window_TitleCommand.prototype.windowHeight = function() {
+CY_Window_TitleCommand.prototype.windowHeight = function () {
     return this.fittingHeight(this.numVisibleRows());
 };
 
@@ -216,7 +216,7 @@ CY_Window_TitleCommand.prototype.windowHeight = function() {
  * Get the number of visible rows.
  * @returns {number} Number of visible rows
  */
-CY_Window_TitleCommand.prototype.numVisibleRows = function() {
+CY_Window_TitleCommand.prototype.numVisibleRows = function () {
     return Math.ceil(this.maxItems() / this.maxCols());
 };
 
@@ -224,7 +224,7 @@ CY_Window_TitleCommand.prototype.numVisibleRows = function() {
  * Get the maximum number of items.
  * @returns {number} Number of commands in the list
  */
-CY_Window_TitleCommand.prototype.maxItems = function() {
+CY_Window_TitleCommand.prototype.maxItems = function () {
     return this._list ? this._list.length : 0;
 };
 
@@ -233,7 +233,7 @@ CY_Window_TitleCommand.prototype.maxItems = function() {
  * Smaller than default for more compact menu.
  * @returns {number} Item height in pixels
  */
-CY_Window_TitleCommand.prototype.itemHeight = function() {
+CY_Window_TitleCommand.prototype.itemHeight = function () {
     return 32;
 };
 
@@ -242,7 +242,7 @@ CY_Window_TitleCommand.prototype.itemHeight = function() {
  * Smaller text for title menu.
  * @returns {number} Font size in pixels
  */
-CY_Window_TitleCommand.prototype.standardFontSize = function() {
+CY_Window_TitleCommand.prototype.standardFontSize = function () {
     return 22;
 };
 
@@ -251,7 +251,7 @@ CY_Window_TitleCommand.prototype.standardFontSize = function() {
  * More padding for cleaner look.
  * @returns {number} Padding in pixels
  */
-CY_Window_TitleCommand.prototype.standardPadding = function() {
+CY_Window_TitleCommand.prototype.standardPadding = function () {
     return 12;
 };
 
@@ -259,7 +259,7 @@ CY_Window_TitleCommand.prototype.standardPadding = function() {
  * Get the text padding.
  * @returns {number} Text padding in pixels
  */
-CY_Window_TitleCommand.prototype.textPadding = function() {
+CY_Window_TitleCommand.prototype.textPadding = function () {
     return 8;
 };
 
@@ -271,7 +271,7 @@ CY_Window_TitleCommand.prototype.textPadding = function() {
  * Update window placement to left side of screen.
  * Requirement 4.1: Position window on left side (x=80, y=center)
  */
-CY_Window_TitleCommand.prototype.updatePlacement = function() {
+CY_Window_TitleCommand.prototype.updatePlacement = function () {
     this.x = 80;
     this.y = Math.floor(Graphics.boxHeight / 2);
 };
@@ -285,7 +285,7 @@ CY_Window_TitleCommand.prototype.updatePlacement = function() {
  * Requirement 4.2: Continue, New Game, Load Game, Settings, Credits
  * Requirement 4.6: Continue only shown when save data exists
  */
-CY_Window_TitleCommand.prototype.makeCommandList = function() {
+CY_Window_TitleCommand.prototype.makeCommandList = function () {
     // Only add Continue if save data exists
     if (this.isContinueEnabled()) {
         this.addCommand('CONTINUE', 'continue', true);
@@ -295,6 +295,7 @@ CY_Window_TitleCommand.prototype.makeCommandList = function() {
     this.addCommand('SETTINGS', 'options', true);
     this.addCommand('CREDITS', 'credits', true);
     this.addCommand('PHASER', 'phaser', true);
+    this.addCommand('TEAM PICK', 'charPick', true);
     this.addCommand('SPINE', 'spine', true);
 };
 
@@ -303,7 +304,7 @@ CY_Window_TitleCommand.prototype.makeCommandList = function() {
  * Requirement 4.6: Continue disabled when no save data exists
  * @returns {boolean} True if any save file exists
  */
-CY_Window_TitleCommand.prototype.isContinueEnabled = function() {
+CY_Window_TitleCommand.prototype.isContinueEnabled = function () {
     return DataManager.isAnySavefileExists();
 };
 
@@ -318,11 +319,11 @@ CY_Window_TitleCommand.prototype.isContinueEnabled = function() {
  * Requirement 4.4: Light red text color for unselected items
  * @param {number} index - Index of the item to draw
  */
-CY_Window_TitleCommand.prototype.drawItem = function(index) {
+CY_Window_TitleCommand.prototype.drawItem = function (index) {
     var rect = this.itemRectForText(index);
     var isSelected = (index === this.index());
     var isEnabled = this.isCommandEnabled(index);
-    
+
     // Determine text color based on state
     // Requirement 4.3: Cyan for selected
     // Requirement 4.4: Light red for unselected, inactive for disabled
@@ -333,10 +334,10 @@ CY_Window_TitleCommand.prototype.drawItem = function(index) {
     } else {
         this.changeTextColor(CY_System.Colors.lightRed);
     }
-    
+
     // Set paint opacity based on enabled state
     this.changePaintOpacity(isEnabled);
-    
+
     // Draw command text (left-aligned, flat style without borders)
     this.drawText(this.commandName(index), rect.x, rect.y, rect.width, 'left');
 };
@@ -345,7 +346,7 @@ CY_Window_TitleCommand.prototype.drawItem = function(index) {
  * Refresh the window contents.
  * Rebuilds command list and redraws all items.
  */
-CY_Window_TitleCommand.prototype.refresh = function() {
+CY_Window_TitleCommand.prototype.refresh = function () {
     this.clearCommandList();
     this.makeCommandList();
     this.createContents();
@@ -360,7 +361,7 @@ CY_Window_TitleCommand.prototype.refresh = function() {
  * Override to use minimal/transparent background for title command.
  * Requirement 4.1: Flat buttons without borders
  */
-CY_Window_TitleCommand.prototype.refreshCyBackground = function() {
+CY_Window_TitleCommand.prototype.refreshCyBackground = function () {
     // Title command uses minimal/no background for flat button appearance
     if (this._cyBackSprite && this._cyBackSprite.bitmap) {
         this._cyBackSprite.bitmap.clear();
@@ -374,7 +375,7 @@ CY_Window_TitleCommand.prototype.refreshCyBackground = function() {
 /**
  * Process OK input and remember the selected command.
  */
-CY_Window_TitleCommand.prototype.processOk = function() {
+CY_Window_TitleCommand.prototype.processOk = function () {
     CY_Window_TitleCommand._lastCommandSymbol = this.currentSymbol();
     CY_Window_Selectable.prototype.processOk.call(this);
 };
@@ -382,7 +383,7 @@ CY_Window_TitleCommand.prototype.processOk = function() {
 /**
  * Select the last used command or default to Continue/first item.
  */
-CY_Window_TitleCommand.prototype.selectLast = function() {
+CY_Window_TitleCommand.prototype.selectLast = function () {
     if (CY_Window_TitleCommand._lastCommandSymbol) {
         this.selectSymbol(CY_Window_TitleCommand._lastCommandSymbol);
     } else if (this.isContinueEnabled()) {

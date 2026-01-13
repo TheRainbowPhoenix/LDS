@@ -1,6 +1,5 @@
 [
   "js/plugins/cy_ui/_header.js",
-
   "js/plugins/cy_ui/CY_System.js",
   "js/plugins/cy_ui/CY_Window_Base.js",
   "js/plugins/cy_ui/CY_Window_Selectable.js",
@@ -14,7 +13,7 @@
   "js/plugins/cy_ui/CY_Scene_Loading.js",
   "js/plugins/cy_ui/CY_Scene_Options.js",
   "js/plugins/cy_ui/CY_Scene_File.js",
-
+  "js/plugins/cy_ui/CY_Scene_CharacterPick.js",
   "js/plugins/cy_ui/CY_Main.js",
   "js/plugins/cy_ui/_footer.js"
 ]

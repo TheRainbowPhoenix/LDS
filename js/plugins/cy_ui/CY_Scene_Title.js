@@ -80,8 +80,7 @@ CY_Scene_Title.prototype.create = function () {
 CY_Scene_Title.prototype.start = function () {
     Scene_Base.prototype.start.call(this);
     SceneManager.clearStack();
-    this.centerSprite(this._backSprite1);
-    this.centerSprite(this._backSprite2);
+    // Background sprites are centered and scaled in createBackground/update
     this.playTitleMusic();
     this.startFadeIn(this.fadeSpeed(), false);
 };
@@ -93,6 +92,21 @@ CY_Scene_Title.prototype.start = function () {
 CY_Scene_Title.prototype.update = function () {
     if (!this.isBusy()) {
         this._commandWindow.open();
+    }
+
+    // Update background scaling
+    if (this._backSprite && this._backSprite.bitmap && this._backSprite.bitmap.isReady()) {
+        this._backSprite.visible = true;
+        if (this._gradientFallback) this._gradientFallback.visible = false;
+
+        // Update scale to fill screen
+        var scaleX = Graphics.width / this._backSprite.bitmap.width;
+        var scaleY = Graphics.height / this._backSprite.bitmap.height;
+        var scale = Math.max(scaleX, scaleY); // Cover
+        this._backSprite.scale.set(scale, scale);
+    } else {
+        if (this._backSprite) this._backSprite.visible = false;
+        if (this._gradientFallback) this._gradientFallback.visible = true;
     }
 
     // Update CRT shader animation
@@ -131,14 +145,25 @@ CY_Scene_Title.prototype.terminate = function () {
  * Requirement 3.5: Supports background images (title1 and title2)
  */
 CY_Scene_Title.prototype.createBackground = function () {
-    this._backSprite1 = new Sprite(
-        ImageManager.loadTitle1($dataSystem.title1Name)
-    );
-    this._backSprite2 = new Sprite(
-        ImageManager.loadTitle2($dataSystem.title2Name)
-    );
-    this.addChild(this._backSprite1);
-    this.addChild(this._backSprite2);
+    var bgName = $dataSystem && $dataSystem.title1Name || "Castle";
+    var bitmap = ImageManager.loadTitle1(bgName);
+
+    this._backSprite = new Sprite(bitmap);
+    this._backSprite.anchor.x = 0.5;
+    this._backSprite.anchor.y = 0.5;
+    this._backSprite.x = Graphics.width / 2;
+    this._backSprite.y = Graphics.height / 2;
+
+    // Gradient Fallback Logic
+    this._gradientFallback = new PIXI.Graphics();
+    this._gradientFallback.beginFill(0x0a0a0a); // Dark bg
+    this._gradientFallback.drawRect(0, 0, Graphics.width, Graphics.height);
+    this._gradientFallback.beginFill(0x842624, 0.2); // Dark Red
+    this._gradientFallback.drawCircle(Graphics.width / 2, Graphics.height / 2, Graphics.width / 1.5);
+    this._gradientFallback.endFill();
+
+    this.addChild(this._gradientFallback);
+    this.addChild(this._backSprite);
 };
 
 /**
@@ -448,6 +473,7 @@ CY_Scene_Title.prototype.createCommandWindow = function () {
     this._commandWindow.setHandler('options', this.commandOptions.bind(this));
     this._commandWindow.setHandler('credits', this.commandCredits.bind(this));
     this._commandWindow.setHandler('phaser', this.commandPhaser.bind(this));
+    this._commandWindow.setHandler('charPick', this.commandCharPick.bind(this));
     this._commandWindow.setHandler('spine', this.commandSpine.bind(this));
 
     this.addChild(this._commandWindow);
@@ -530,6 +556,11 @@ CY_Scene_Title.prototype.commandPhaser = function () {
     this._commandWindow.close();
     this.fadeOutAll();
     SceneManager.goto(Scene_PhaserTest);
+};
+
+CY_Scene_Title.prototype.commandCharPick = function () {
+    this._commandWindow.close();
+    SceneManager.goto(CY_Scene_CharacterPick);
 };
 
 CY_Scene_Title.prototype.commandSpine = function () {

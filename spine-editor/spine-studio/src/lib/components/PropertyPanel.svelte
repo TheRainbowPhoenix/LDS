@@ -1,6 +1,47 @@
 <script lang="ts">
-    import { selectedNode } from "../Store";
+    import { selectedNode, addHistory } from "../Store";
     import { Move, RotateCw, Spline, Ruler } from "lucide-svelte";
+
+    // Helper to format floats
+    function fmt(val: number | undefined): string {
+        if (val === undefined) return "0";
+        return parseFloat(val.toFixed(4)).toString();
+    }
+
+    // Update Store (Live)
+    function update(prop: string, value: any) {
+        selectedNode.update((node) => {
+            if (!node) return null;
+            (node as any)[prop] = parseFloat(value);
+            return node;
+        });
+    }
+
+    // Commit to History (on Change/Blur)
+    function commit(prop: string, oldVal: number, newVal: string) {
+        const val = parseFloat(newVal);
+        if (val === oldVal) return;
+
+        // We need a snapshot of the object reference?
+        // Actually, selectedNode holds the reference.
+        // We just need to know which bone.
+        const node = $selectedNode;
+        if (!node) return;
+
+        addHistory({
+            name: `Edit ${prop}`,
+            undo: () => {
+                // We need to revert the specific property on the specific object reference
+                // 'node' variable captured in closure is the reference.
+                (node as any)[prop] = oldVal;
+                selectedNode.set(node); // Trigger update
+            },
+            redo: () => {
+                (node as any)[prop] = val;
+                selectedNode.set(node);
+            },
+        });
+    }
 </script>
 
 <div class="prop-panel">
@@ -14,77 +55,151 @@
                 <span class="node-type">Bone</span>
             </div>
 
-            <div class="section-title">Transform</div>
+            {#if "x" in $selectedNode}
+                <div class="section-title">Transform</div>
 
-            <!-- Translate -->
-            <div class="prop-row">
-                <div class="label"><Move size={12} /> Translate</div>
-                <div class="inputs">
-                    <div class="input-group">
-                        <label>X</label>
-                        <input type="number" value={$selectedNode.x} />
-                    </div>
-                    <div class="input-group">
-                        <label>Y</label>
-                        <input type="number" value={$selectedNode.y} />
+                <!-- Translate -->
+                <div class="prop-row">
+                    <div class="label"><Move size={12} /> Translate</div>
+                    <div class="inputs">
+                        <div class="input-group">
+                            <label for="cx">X</label>
+                            <input
+                                id="cx"
+                                type="number"
+                                value={fmt($selectedNode.x)}
+                                on:input={(e) =>
+                                    update("x", e.currentTarget.value)}
+                                on:change={(e) =>
+                                    commit(
+                                        "x",
+                                        $selectedNode?.x,
+                                        e.currentTarget.value,
+                                    )}
+                            />
+                        </div>
+                        <div class="input-group">
+                            <label for="cy">Y</label>
+                            <input
+                                id="cy"
+                                type="number"
+                                value={fmt($selectedNode.y)}
+                                on:input={(e) =>
+                                    update("y", e.currentTarget.value)}
+                                on:change={(e) =>
+                                    commit(
+                                        "y",
+                                        $selectedNode?.y,
+                                        e.currentTarget.value,
+                                    )}
+                            />
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Rotate -->
-            <div class="prop-row">
-                <div class="label"><RotateCw size={12} /> Rotate</div>
-                <div class="inputs">
-                    <div class="input-group">
-                        <label>°</label>
-                        <input type="number" value={$selectedNode.rotation} />
+                <!-- Rotate -->
+                <div class="prop-row">
+                    <div class="label"><RotateCw size={12} /> Rotate</div>
+                    <div class="inputs">
+                        <div class="input-group">
+                            <label for="cr">°</label>
+                            <input
+                                id="cr"
+                                type="number"
+                                value={fmt($selectedNode.rotation)}
+                                on:input={(e) =>
+                                    update("rotation", e.currentTarget.value)}
+                                on:change={(e) =>
+                                    commit(
+                                        "rotation",
+                                        $selectedNode?.rotation,
+                                        e.currentTarget.value,
+                                    )}
+                            />
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Scale -->
-            <div class="prop-row">
-                <div class="label"><Ruler size={12} /> Scale</div>
-                <div class="inputs">
-                    <div class="input-group">
-                        <label>X</label>
-                        <input
-                            type="number"
-                            value={$selectedNode.scaleX ?? 1}
-                            step="0.1"
-                        />
-                    </div>
-                    <div class="input-group">
-                        <label>Y</label>
-                        <input
-                            type="number"
-                            value={$selectedNode.scaleY ?? 1}
-                            step="0.1"
-                        />
+                <!-- Scale -->
+                <div class="prop-row">
+                    <div class="label"><Ruler size={12} /> Scale</div>
+                    <div class="inputs">
+                        <div class="input-group">
+                            <label for="sx">X</label>
+                            <input
+                                id="sx"
+                                type="number"
+                                value={fmt($selectedNode.scaleX ?? 1)}
+                                step="0.1"
+                                on:input={(e) =>
+                                    update("scaleX", e.currentTarget.value)}
+                                on:change={(e) =>
+                                    commit(
+                                        "scaleX",
+                                        $selectedNode?.scaleX ?? 1,
+                                        e.currentTarget.value,
+                                    )}
+                            />
+                        </div>
+                        <div class="input-group">
+                            <label for="sy">Y</label>
+                            <input
+                                id="sy"
+                                type="number"
+                                value={fmt($selectedNode.scaleY ?? 1)}
+                                step="0.1"
+                                on:input={(e) =>
+                                    update("scaleY", e.currentTarget.value)}
+                                on:change={(e) =>
+                                    commit(
+                                        "scaleY",
+                                        $selectedNode?.scaleY ?? 1,
+                                        e.currentTarget.value,
+                                    )}
+                            />
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Shear -->
-            <div class="prop-row">
-                <div class="label"><Spline size={12} /> Shear</div>
-                <div class="inputs">
-                    <div class="input-group">
-                        <label>X</label>
-                        <input
-                            type="number"
-                            value={$selectedNode.shearX ?? 0}
-                        />
-                    </div>
-                    <div class="input-group">
-                        <label>Y</label>
-                        <input
-                            type="number"
-                            value={$selectedNode.shearY ?? 0}
-                        />
+                <!-- Shear -->
+                <div class="prop-row">
+                    <div class="label"><Spline size={12} /> Shear</div>
+                    <div class="inputs">
+                        <div class="input-group">
+                            <label for="shx">X</label>
+                            <input
+                                id="shx"
+                                type="number"
+                                value={fmt($selectedNode.shearX ?? 0)}
+                                on:input={(e) =>
+                                    update("shearX", e.currentTarget.value)}
+                                on:change={(e) =>
+                                    commit(
+                                        "shearX",
+                                        $selectedNode?.shearX ?? 0,
+                                        e.currentTarget.value,
+                                    )}
+                            />
+                        </div>
+                        <div class="input-group">
+                            <label for="shy">Y</label>
+                            <input
+                                id="shy"
+                                type="number"
+                                value={fmt($selectedNode.shearY ?? 0)}
+                                on:input={(e) =>
+                                    update("shearY", e.currentTarget.value)}
+                                on:change={(e) =>
+                                    commit(
+                                        "shearY",
+                                        $selectedNode?.shearY ?? 0,
+                                        e.currentTarget.value,
+                                    )}
+                            />
+                        </div>
                     </div>
                 </div>
-            </div>
+            {/if}
         </div>
     {:else}
         <div class="empty-state">No selection</div>

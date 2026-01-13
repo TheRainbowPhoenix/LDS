@@ -60,7 +60,7 @@
             use:melt={$item({ id: itemId, hasChildren })}
             class="tree-item-btn"
             class:selected={isSelectedNode}
-            style="padding-left: {level * 16 + 8}px"
+            style="padding-left: {8}px"
         >
             <!-- Arrow/Chevron for Folders -->
             <span
@@ -156,5 +156,7 @@
         margin: 0;
         padding: 0;
         list-style: none;
+        border-left: 1px solid rgba(255, 255, 255, 0.1);
+        margin-left: 16px;
     }
 </style>

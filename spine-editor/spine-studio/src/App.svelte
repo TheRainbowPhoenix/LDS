@@ -9,6 +9,7 @@
     type TreeItemData,
   } from "./lib/components/TreeView.svelte";
   import PropertyPanel from "./lib/components/PropertyPanel.svelte";
+  import ZoomControls from "./lib/components/ZoomControls.svelte";
 
   let canvas: HTMLCanvasElement;
   let renderer: SpineRenderer;
@@ -112,7 +113,22 @@
       console.error("Failed to load spine:", e);
     }
   });
+
+  // Global Shortcuts
+  import { undo, redo } from "./lib/Store";
+  function onKeyDown(e: KeyboardEvent) {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+      e.preventDefault();
+      undo();
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") {
+      e.preventDefault();
+      redo();
+    }
+  }
 </script>
+
+<svelte:window on:keydown={onKeyDown} />
 
 <div class="app-layout">
   <!-- Top Header / Toolbar -->
@@ -132,7 +148,10 @@
 
     <!-- Center: Stage -->
     <main class="stage">
-      <div class="stage-header">Stage</div>
+      <div class="stage-header">
+        Stage
+        <ZoomControls />
+      </div>
       <div class="canvas-wrapper">
         <canvas bind:this={canvas}></canvas>
       </div>

@@ -1,9 +1,4 @@
-<script lang="ts">
-    import { createTreeView } from "@melt-ui/svelte";
-    import { getContext, setContext } from "svelte";
-    import TreeNode from "./TreeNode.svelte";
-
-    // -- Types --
+<script context="module" lang="ts">
     export type TreeItemData = {
         id: string;
         title: string;
@@ -20,6 +15,12 @@
             | "root";
         children?: TreeItemData[];
     };
+</script>
+
+<script lang="ts">
+    import { createTreeView } from "@melt-ui/svelte";
+    import { getContext, setContext } from "svelte";
+    import TreeNode from "./TreeNode.svelte";
 
     export let items: TreeItemData[] = [];
     export let selectedId: string | null = null;

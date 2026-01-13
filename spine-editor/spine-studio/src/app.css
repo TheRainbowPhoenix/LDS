@@ -1,3 +1,56 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  /* Dark Theme Palette */
+  --bg-app: #181818;
+  --bg-panel: #1e1e1e;
+  --bg-header: #2d2d2d;
+  --bg-input: #252526;
+  --bg-selected: #007acc;
+  --bg-hover: #2a2d2e;
+
+  --border-light: #3e3e42;
+  --border-dark: #1b1b1b;
+
+  --text-main: #cccccc;
+  --text-muted: #858585;
+  --text-accent: #ffffff;
+
+  --accent-blue: #007acc;
+  --accent-orange: #d97e00;
+
+  /* Spacing */
+  --header-height: 48px;
+  --sidebar-width: 300px;
+  /* Wider for the hierarchy */
+  --prop-panel-width: 280px;
+}
+
+body {
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  margin: 0;
+  overflow: hidden;
+  /* App-like feel */
+  font-size: 13px;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+  background-color: var(--bg-app);
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #424242;
+  border: 2px solid var(--bg-app);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-corner {
+  background-color: var(--bg-app);
+}

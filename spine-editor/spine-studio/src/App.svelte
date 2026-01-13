@@ -1,16 +1,101 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import { SpineRenderer } from "./lib/SpineRenderer";
-  import { SpineParser } from "./lib/SpineParser";
+  import { SpineParser, type SpineData } from "./lib/SpineParser";
   import { skeletonData, selectedNode } from "./lib/Store";
+
+  import Toolbar from "./lib/components/Toolbar.svelte";
+  import TreeView, {
+    type TreeItemData,
+  } from "./lib/components/TreeView.svelte";
+  import PropertyPanel from "./lib/components/PropertyPanel.svelte";
 
   let canvas: HTMLCanvasElement;
   let renderer: SpineRenderer;
+  let mode: "design" | "animate" = "design";
+  let treeItems: TreeItemData[] = [];
+
+  // Transform Helper for TreeView
+  function buildTreeData(data: SpineData): TreeItemData[] {
+    // 1. Find Root Bone
+    const rootBone = data.bones.find((b) => !b.parent);
+
+    // Recursive builder for bones
+    function buildBoneTree(bone: any): TreeItemData {
+      const children = data.bones
+        .filter((b) => b.parent === bone.name)
+        .map((b) => buildBoneTree(b));
+
+      return {
+        id: bone.name,
+        title: bone.name,
+        type: "bone",
+        children: children.length > 0 ? children : undefined,
+      };
+    }
+
+    const boneTree = rootBone ? [buildBoneTree(rootBone)] : [];
+
+    // Top Level Hierarchy
+    return [
+      {
+        id: "root-skeleton",
+        title: "Skeleton",
+        type: "root",
+        children: boneTree,
+      },
+      {
+        id: "constraints",
+        title: "Constraints",
+        type: "constraint",
+        children: [],
+      },
+      { id: "draw-order", title: "Draw Order", type: "folder", children: [] },
+      { id: "skins", title: "Skins", type: "skin", children: [] },
+      { id: "events", title: "Events", type: "event", children: [] },
+      {
+        id: "animations",
+        title: "Animations",
+        type: "animation",
+        children: [],
+      },
+      { id: "images", title: "Images", type: "image", children: [] },
+      { id: "audio", title: "Audio", type: "audio", children: [] },
+    ];
+  }
+
+  // Reactive: Update tree when data changes
+  $: if ($skeletonData) {
+    treeItems = buildTreeData($skeletonData);
+  }
+
+  // Reactive: Selection handling
+  let selectedId: string | null = null;
+  $: if (selectedId) {
+    const bone = $skeletonData?.bones.find((b) => b.name === selectedId);
+    if (bone) selectedNode.set(bone);
+  }
 
   onMount(async () => {
     // 1. Init Renderer
     if (canvas) {
       renderer = new SpineRenderer(canvas);
+      // Force resize once mounted and layout is stable
+      setTimeout(
+        () =>
+          renderer.app.renderer.resize(canvas.offsetWidth, canvas.offsetHeight),
+        100,
+      );
+
+      // Resize observer for the canvas container
+      const resizeObserver = new ResizeObserver(() => {
+        renderer.app.renderer.resize(canvas.offsetWidth, canvas.offsetHeight);
+        renderer.rootContainer.position.set(
+          canvas.offsetWidth / 2,
+          canvas.offsetHeight * 0.8,
+        );
+      });
+      resizeObserver.observe(canvas.parentElement!);
     }
 
     // 2. Load Data (MVP Hardcoded)
@@ -27,62 +112,133 @@
       console.error("Failed to load spine:", e);
     }
   });
-
-  $: treeData = $skeletonData ? $skeletonData.bones : [];
 </script>
 
-<main
-  class="flex h-screen w-screen bg-[#111] text-[#eee] font-sans overflow-hidden"
->
-  <!-- Left Sidebar / Tree View -->
-  <aside class="w-64 bg-[#252526] border-r border-[#333] flex flex-col">
-    <div class="p-2 bg-[#333] font-bold text-xs uppercase tracking-wider">
-      Hierarchy
-    </div>
-    <div class="flex-1 overflow-y-auto p-2 text-sm">
-      {#if $skeletonData}
-        <ul class="space-y-1">
-          {#each $skeletonData.bones as bone}
-            <li
-              class="cursor-pointer hover:bg-[#37373d] px-2 py-1 rounded flex items-center gap-2"
-              class:bg-[#007acc]={$selectedNode?.name === bone.name}
-              on:click={() => selectedNode.set(bone)}
-              on:keydown={(e) => e.key === "Enter" && selectedNode.set(bone)}
-            >
-              <span class="opacity-50 text-xs">🦴</span>
-              {bone.name}
-            </li>
-          {/each}
-        </ul>
-      {:else}
-        <div class="text-gray-500 p-4 text-center">Loading Spineboy...</div>
-      {/if}
-    </div>
-  </aside>
+<div class="app-layout">
+  <!-- Top Header / Toolbar -->
+  <header class="header">
+    <Toolbar bind:mode />
+  </header>
 
-  <!-- Main Canvas Area -->
-  <div class="flex-1 relative bg-[#1e1e1e] flex flex-col">
-    <div
-      class="h-10 bg-[#2d2d2d] border-b border-[#333] flex items-center px-4 gap-4"
-    >
-      <span class="font-bold text-sm text-gray-400">Spine Editor MVP</span>
-      <button
-        class="px-3 py-1 bg-[#444] rounded text-xs hover:bg-[#555] active:bg-[#666]"
-        >Open</button
-      >
-    </div>
+  <!-- Main Workspace -->
+  <div class="workspace">
+    <!-- Left Sidebar: Hierarchy -->
+    <aside class="sidebar left">
+      <div class="sidebar-header">Hierarchy</div>
+      <div class="sidebar-content">
+        <TreeView items={treeItems} bind:selectedId />
+      </div>
+    </aside>
 
-    <div class="flex-1 relative overflow-hidden">
-      <canvas bind:this={canvas} class="block w-full h-full outline-none"
-      ></canvas>
-    </div>
+    <!-- Center: Stage -->
+    <main class="stage">
+      <div class="stage-header">Stage</div>
+      <div class="canvas-wrapper">
+        <canvas bind:this={canvas}></canvas>
+      </div>
+    </main>
+
+    <!-- Right Sidebar: Properties -->
+    <aside class="sidebar right">
+      <PropertyPanel />
+    </aside>
   </div>
-</main>
+</div>
 
 <style>
   :global(body) {
     margin: 0;
-    padding: 0;
-    background: #111;
+    background-color: var(--bg-app);
+    color: var(--text-main);
+    overflow: hidden;
+  }
+
+  .app-layout {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  .header {
+    height: var(--header-height);
+    flex-shrink: 0;
+    z-index: 10;
+  }
+
+  .workspace {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+  .sidebar {
+    background-color: var(--bg-panel);
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border-dark);
+  }
+
+  .sidebar.left {
+    width: var(--sidebar-width);
+    flex-shrink: 0;
+  }
+
+  .sidebar.right {
+    width: var(--prop-panel-width);
+    flex-shrink: 0;
+    border-left: 1px solid var(--border-dark);
+    border-right: none;
+  }
+
+  .sidebar-header {
+    height: 32px;
+    padding: 0 12px;
+    display: flex;
+    align-items: center;
+    background-color: var(--bg-header);
+    border-bottom: 1px solid var(--border-light);
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+
+  .sidebar-content {
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .stage {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: #111; /* Dark area for canvas */
+    position: relative;
+  }
+
+  .stage-header {
+    height: 32px;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    background-color: var(--bg-header);
+    border-bottom: 1px solid var(--border-dark);
+    font-size: 12px;
+    color: var(--text-main);
+  }
+
+  .canvas-wrapper {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    outline: none;
   }
 </style>

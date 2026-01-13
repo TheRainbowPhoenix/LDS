@@ -82,6 +82,35 @@ CY_Window_CharPickActions.prototype.drawItem = function (index) {
 };
 
 //-----------------------------------------------------------------------------
+// Spriteset_CharPick
+//-----------------------------------------------------------------------------
+
+function Spriteset_CharPick() {
+    this.initialize.apply(this, arguments);
+}
+
+Spriteset_CharPick.prototype = Object.create(Spriteset_Base.prototype);
+Spriteset_CharPick.prototype.constructor = Spriteset_CharPick;
+
+Spriteset_CharPick.prototype.createLowerLayer = function () {
+    Spriteset_Base.prototype.createLowerLayer.call(this);
+    this.createPictures();
+};
+
+Spriteset_CharPick.prototype.createPictures = function () {
+    var width = Graphics.boxWidth;
+    var height = Graphics.boxHeight;
+    var x = (Graphics.width - width) / 2;
+    var y = (Graphics.height - height) / 2;
+    this._pictureContainer = new Sprite();
+    this._pictureContainer.setFrame(x, y, width, height);
+    for (var i = 1; i <= $gameScreen.maxPictures(); i++) {
+        this._pictureContainer.addChild(new Sprite_Picture(i));
+    }
+    this.addChild(this._pictureContainer);
+};
+
+//-----------------------------------------------------------------------------
 // CY_Scene_CharacterPick
 //-----------------------------------------------------------------------------
 
@@ -110,6 +139,21 @@ CY_Scene_CharacterPick.prototype.getCharacterData = function () {
         {
             name: "Chaos Cros", image: "FCroc Right", classes: "Program / Robotic / Tank",
             stats: { HP: 600, EN: 150, ATK: 5, DEF: 3, HEAL: 2, SDEF: 4, ENA: 3, LUCK: 3 }
+        },
+        {
+            name: "Spine Boy", image: "spineboy-pro", spine: "spineboy-pro", anim: "idle",
+            classes: "Mascot / Test / Hero",
+            stats: { HP: 400, EN: 120, ATK: 2, DEF: 1, HEAL: 4, SDEF: 2, ENA: 3, LUCK: 2 }
+        },
+        {
+            name: "Seele", image: "seele", spine: "seele", anim: "animation",
+            classes: "Alter / Dark / Evil",
+            stats: { HP: 600, EN: 250, ATK: 6, DEF: 4, HEAL: 2, SDEF: 4, ENA: 2, LUCK: 2 }
+        },
+        {
+            name: "kapara", image: "kapara", spine: "kapara", anim: "OP_iya",
+            classes: "Alter / Dark / Evil",
+            stats: { HP: 600, EN: 250, ATK: 6, DEF: 4, HEAL: 2, SDEF: 4, ENA: 2, LUCK: 2 }
         },
         {
             name: "Tails-Ko", image: "Tails Right", classes: "Tools / Organic / Support",
@@ -156,6 +200,7 @@ CY_Scene_CharacterPick.prototype.getCharacterData = function () {
 
 CY_Scene_CharacterPick.prototype.create = function () {
     CY_Scene_MenuBase.prototype.create.call(this);
+    this.createSpriteset();
     this.createTitleBar();
     this.createTeamList();
     this.createCharacterSprite();
@@ -165,9 +210,45 @@ CY_Scene_CharacterPick.prototype.create = function () {
     this.refreshInfo();
 };
 
+CY_Scene_CharacterPick.prototype.createSpriteset = function () {
+    this._spriteset = new Spriteset_Base();
+    // Manually add picture container since Spriteset_Base doesn't have it by default in all versions
+    this._spriteset.createPictures = function () {
+        var width = Graphics.boxWidth;
+        var height = Graphics.boxHeight;
+        var x = (Graphics.width - width) / 2;
+        var y = (Graphics.height - height) / 2;
+        this._pictureContainer = new Sprite();
+        this._pictureContainer.setFrame(x, y, width, height);
+        for (var i = 1; i <= $gameScreen.maxPictures(); i++) {
+            this._pictureContainer.addChild(new Sprite_Picture(i));
+        }
+        this.addChild(this._pictureContainer);
+    };
+    this._spriteset.createPictures();
+
+    // Z-index: Behind UI
+    this.addChildAt(this._spriteset, 0);
+};
+
 //-----------------------------------------------------------------------------
 // Title Bar (from CY_Scene_File)
 //-----------------------------------------------------------------------------
+
+CY_Scene_CharacterPick.prototype.update = function () {
+    CY_Scene_MenuBase.prototype.update.call(this);
+
+    // Update Spine Avatar
+    if (this._spineAvatar) {
+        this._spineAvatar.update();
+    }
+
+    // Update Game Screen (Pictures, Shake, Flash, etc)
+    $gameScreen.update();
+    if (this._spriteset) {
+        this._spriteset.update();
+    }
+};
 
 CY_Scene_CharacterPick.prototype.createTitleBar = function () {
     var offsets = this.getScreenOffsets();
@@ -337,13 +418,111 @@ CY_Scene_CharacterPick.prototype.refreshTeamList = function () {
 // Character Sprite (Left Center)
 //-----------------------------------------------------------------------------
 
+//-----------------------------------------------------------------------------
+// CY_SpineAvatar
+//-----------------------------------------------------------------------------
+
+function CY_SpineAvatar() {
+    this.initialize.apply(this, arguments);
+}
+
+CY_SpineAvatar.prototype = Object.create(PIXI.Container.prototype);
+CY_SpineAvatar.prototype.constructor = CY_SpineAvatar;
+
+CY_SpineAvatar.prototype.initialize = function () {
+    PIXI.Container.call(this);
+    this._spine = null;
+};
+
+CY_SpineAvatar.prototype.setSpine = function (key, anim, maxWidth, maxHeight) {
+    // 1. cleanup
+    if (this._spine) {
+        this.removeChild(this._spine);
+        this._spine = null;
+    }
+
+    // 2. validate data
+    if (!window.Makonet || !Makonet.MpiShowSpine || !Makonet.MpiShowSpine.spineData) {
+        return false;
+    }
+
+    var data = Makonet.MpiShowSpine.spineData[key];
+    if (!data) return false;
+
+    try {
+        // 3. Raw Create
+        this._spine = new PIXI.spine.Spine(data);
+        this.addChild(this._spine);
+
+        // 4. Skin Logic (Force a refresh of slots)
+        if (this._spine.spineData.skins.length > 1) {
+            // Often 'default' is 0. Try 1 if exists, or just use what we have.
+            // MpiShowSpine uses skins[1] if > 1.
+            var skin = this._spine.spineData.skins[1];
+            this._spine.skeleton.setSkin(skin);
+            this._spine.skeleton.setSlotsToSetupPose();
+        }
+
+        // 5. Animation
+        if (anim) {
+            // Basic existence check
+            var hasAnim = this._spine.spineData.animations.some(function (a) { return a.name === anim; });
+            if (hasAnim) {
+                this._spine.state.setAnimation(0, anim, true);
+            } else {
+                // Fallback
+                console.warn("Anim " + anim + " not found in " + key);
+                // try 'idle'
+                this._spine.state.setAnimation(0, 'idle', true);
+            }
+        }
+
+        // 6. Scale / Fit
+        if (maxWidth && maxHeight) {
+            // We need local bounds. PIXI Spine bounds can be empty if not updated.
+            // Force a small update to calc bounds?
+            this._spine.update(0);
+            var b = this._spine.getLocalBounds();
+            var w = b.width;
+            var h = b.height;
+
+            // Fallbacks if bounds failed
+            if (w === 0 || h === 0) {
+                w = data.width || 400;
+                h = data.height || 400;
+            }
+
+            // Calculate scale
+            var sX = maxWidth / w;
+            var sY = maxHeight / h;
+            var scale = Math.min(sX, sY); // Contain
+
+            if (scale > 1.5) scale = 1.5; // Cap
+            this._spine.scale.set(scale);
+        }
+
+        return true;
+
+    } catch (e) {
+        console.error("CY_SpineAvatar Error:", e);
+        return false;
+    }
+};
+
+CY_SpineAvatar.prototype.update = function () {
+    if (this._spine) {
+        this._spine.update(1.0 / 60.0);
+    }
+};
+
+
 CY_Scene_CharacterPick.prototype.createCharacterSprite = function () {
     // 1. Calculate Available Area
-    var topBarBottom = CY_Scene_MenuBase.TOP_BAR_HEIGHT + 20; // y-start
-    var teamListRight = 40 + 100 + 40; // x-start (Team list at x=40 + width 100 + margin)
+    var topBarBottom = CY_Scene_MenuBase.TOP_BAR_HEIGHT + 20;
+    var teamListRight = 40 + 100 + 40;
 
     var panelW = 450;
-    var rightPanelX = Graphics.width - panelW - 40; // x-end
+    var rightPanelX = Graphics.width - panelW - 40;
 
     this._charArea = {
         x: teamListRight,
@@ -352,22 +531,19 @@ CY_Scene_CharacterPick.prototype.createCharacterSprite = function () {
         h: Graphics.height - topBarBottom
     };
 
-    // 2. Debug Green Border
-    // var debug = new PIXI.Graphics();
-    // debug.lineStyle(2, 0x00FF00, 0.5);
-    // debug.drawRect(this._charArea.x, this._charArea.y, this._charArea.w, this._charArea.h);
-    // this.addChild(debug);
-
-    // 3. Sprite
+    // 2. Static Image Sprite
     this._characterSprite = new Sprite();
     this._characterSprite.anchor.x = 0.5;
     this._characterSprite.anchor.y = 1.0;
-
-    // Position at horizontal center of area, and bottom of screen
     this._characterSprite.x = this._charArea.x + (this._charArea.w / 2);
     this._characterSprite.y = Graphics.height;
-
     this.addChild(this._characterSprite);
+
+    // 3. Spine Avatar Container
+    this._spineAvatar = new CY_SpineAvatar();
+    this._spineAvatar.x = this._charArea.x + (this._charArea.w / 2);
+    this._spineAvatar.y = Graphics.height;
+    this.addChild(this._spineAvatar);
 };
 
 //-----------------------------------------------------------------------------
@@ -483,35 +659,64 @@ CY_Scene_CharacterPick.prototype.onSelect = function () {
 // Content Refresh
 //-----------------------------------------------------------------------------
 
+// Helper methods to find Spine Data
+CY_Scene_CharacterPick.prototype.checkSpineData = function (char) {
+    // Deprecated / Unused wrapper for safety
+    return null;
+};
+
+CY_Scene_CharacterPick.prototype.setSpine = function (spineData, preferredAnim) {
+    // Deprecated / Unused wrapper
+};
+
 CY_Scene_CharacterPick.prototype.refreshInfo = function () {
     var char = this._characters[this._currentIndex];
 
-    // 1. Update Image & Scale
-    this._characterSprite.bitmap = ImageManager.loadPicture(char.image);
+    // 0. Update Debug Border (Ensure it exists for visibility check)
+    if (!this._debugRect) {
+        this._debugRect = new PIXI.Graphics();
+        this.addChild(this._debugRect);
+    }
+    this._debugRect.clear();
+    this._debugRect.lineStyle(2, 0x00FF00, 1);
+    this._debugRect.drawRect(this._charArea.x, this._charArea.y, this._charArea.w, this._charArea.h);
 
-    this._characterSprite.bitmap.addLoadListener(() => {
-        var w = this._characterSprite.bitmap.width;
-        var h = this._characterSprite.bitmap.height;
 
-        // Fit Logic: Scale to fit inside _charArea
-        // We want to fill as much as possible but containment preferred to avoid clipping heads?
-        // User request: "scale the image of each battler to fit that max space without clip"
+    // --- SPINE INTEGRATION ---
+    var spineKey = char.spine;
 
-        var maxW = this._charArea.w;
-        var maxH = this._charArea.h;
+    // Auto-map if not explicit? (Optional, based on user request for "raw use")
+    if (!spineKey && char.image === "spineboy-pro") spineKey = "spineboy-pro";
 
-        var scaleX = maxW / w;
-        var scaleY = maxH / h;
+    var spineSuccess = false;
 
-        // Use the smaller scale to fit entirely (contain)
-        // Or if we want to fill height primarily? User said "fit that max space without clip"
-        var scale = Math.min(scaleX, scaleY);
+    if (spineKey) {
+        console.log("Attempting Spine: " + spineKey + " anim: " + char.anim);
+        spineSuccess = this._spineAvatar.setSpine(spineKey, char.anim || 'idle', this._charArea.w, this._charArea.h);
+    } else {
+        // Clear if no spine requested
+        this._spineAvatar.setSpine(null);
+    }
 
-        // Optional: Cap scale if it's too pixelated? Or allow growing?
-        // Let's assume growing is fine.
+    if (spineSuccess) {
+        this._characterSprite.visible = false;
+        this._spineAvatar.visible = true;
+    } else {
+        this._spineAvatar.visible = false;
+        this._characterSprite.visible = true;
 
-        this._characterSprite.scale.set(scale, scale);
-    });
+        // 1. Update Image & Scale (Original Logic)
+        this._characterSprite.bitmap = ImageManager.loadPicture(char.image);
+
+        this._characterSprite.bitmap.addLoadListener(() => {
+            var w = this._characterSprite.bitmap.width;
+            var h = this._characterSprite.bitmap.height;
+            var maxW = this._charArea.w;
+            var maxH = this._charArea.h;
+            var scale = Math.min(maxW / w, maxH / h);
+            this._characterSprite.scale.set(scale, scale);
+        });
+    }
 
     // 2. Clear Old Text
     this._textContainer.removeChildren();

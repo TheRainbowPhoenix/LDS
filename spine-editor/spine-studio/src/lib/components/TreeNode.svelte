@@ -13,6 +13,7 @@
         Paintbrush,
         Circle,
         Box,
+        Paperclip,
     } from "lucide-svelte";
 
     // We need to receive the builders from context or props
@@ -43,6 +44,8 @@
                 return Speaker;
             case "root":
                 return Layers;
+            case "attachment":
+                return Paperclip;
             default:
                 return Folder;
         }

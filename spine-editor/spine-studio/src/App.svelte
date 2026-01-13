@@ -28,11 +28,47 @@
         .filter((b) => b.parent === bone.name)
         .map((b) => buildBoneTree(b));
 
+      // Find Slots for this bone
+      const slots = data.slots.filter((s) => s.bone === bone.name);
+
+      const slotNodes = slots.map((slot) => {
+        // Find active attachment (or all available in default skin)
+        const childrenAtt: TreeItemData[] = [];
+
+        // Look in default skin
+        const defaultSkin = data.skins.find((s) => s.name === "default");
+        if (defaultSkin) {
+          const startObs = defaultSkin.attachments.get(slot.name);
+          if (startObs) {
+            startObs.forEach((att: any, key: string) => {
+              // Check if this is the active attachment?
+              // For Tree view, we might want to list all, but emphasize active.
+              // Or just list ALL known attachments for this slot.
+              childrenAtt.push({
+                id: `${slot.name}:${att.name}`,
+                title: att.name,
+                type: "attachment",
+              });
+            });
+          }
+        }
+
+        return {
+          id: slot.name,
+          title: slot.name,
+          type: "slot",
+          children: childrenAtt.length > 0 ? childrenAtt : undefined,
+        };
+      });
+
+      // Combine Bone Children and Slots
+      const combinedChildren = [...slotNodes, ...children];
+
       return {
         id: bone.name,
         title: bone.name,
         type: "bone",
-        children: children.length > 0 ? children : undefined,
+        children: combinedChildren.length > 0 ? combinedChildren : undefined,
       };
     }
 
@@ -74,8 +110,17 @@
   // Reactive: Selection handling
   let selectedId: string | null = null;
   $: if (selectedId) {
+    // Can be Bone or Slot now.
     const bone = $skeletonData?.bones.find((b) => b.name === selectedId);
     if (bone) selectedNode.set(bone);
+    else {
+      // Maybe slot?
+      const slot = $skeletonData?.slots.find((s) => s.name === selectedId);
+      if (slot) {
+        // selectedNode.set(slot); // Need store to handle Slot selection too?
+        // For MVP, focus on Bones.
+      }
+    }
   }
 
   onMount(async () => {
@@ -102,10 +147,20 @@
 
     // 2. Load Data (MVP Hardcoded)
     try {
+      // JSON
       const response = await fetch("/spines/spineboy-pro.json");
       const json = await response.json();
       const data = SpineParser.parseSkeleton(json);
       skeletonData.set(data);
+
+      // Atlas
+      const atlasResp = await fetch("/spines/spineboy-pro.atlas");
+      const atlasText = await atlasResp.text();
+      const atlas = SpineParser.parseAtlas(atlasText);
+      console.log("Atlas loaded", atlas);
+
+      // Image
+      await renderer.loadTexture(atlas, "/spines/spineboy-pro.png");
 
       // 3. Render
       renderer.loadSkeleton(data);

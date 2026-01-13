@@ -18,63 +18,68 @@
  */
 
 //-----------------------------------------------------------------------------
-// CY_Window_CharActions
+// CY_Window_CharPickActions
 //-----------------------------------------------------------------------------
 
-function CY_Window_CharActions() {
+function CY_Window_CharPickActions() {
     this.initialize.apply(this, arguments);
 }
 
-CY_Window_CharActions.prototype = Object.create(Window_HorzCommand.prototype);
-CY_Window_CharActions.prototype.constructor = CY_Window_CharActions;
+CY_Window_CharPickActions.prototype = Object.create(CY_Window_Selectable.prototype);
+CY_Window_CharPickActions.prototype.constructor = CY_Window_CharPickActions;
 
-CY_Window_CharActions.prototype.initialize = function (x, y) {
-    Window_HorzCommand.prototype.initialize.call(this, x, y);
-    this._cyBackSprite = null;
+CY_Window_CharPickActions.prototype.initialize = function (x, y, width, height) {
+    this._commands = ['NEXT', 'SELECT'];
+    CY_Window_Selectable.prototype.initialize.call(this, x, y, width, height);
+    this.refresh();
+    this.select(0);
+    this.activate(); // Ensure active state
     this.setBackgroundType(2); // Transparent
 };
 
-CY_Window_CharActions.prototype.windowWidth = function () {
-    return 360; // Wider
-};
-
-CY_Window_CharActions.prototype.maxCols = function () {
+CY_Window_CharPickActions.prototype.maxCols = function () {
     return 2;
 };
 
-CY_Window_CharActions.prototype.makeCommandList = function () {
-    this.addCommand('NEXT', 'next');
-    this.addCommand('SELECT', 'select');
+CY_Window_CharPickActions.prototype.maxItems = function () {
+    return this._commands.length;
 };
 
-CY_Window_CharActions.prototype.itemHeight = function () {
-    return 60; // Taller
+CY_Window_CharPickActions.prototype.itemHeight = function () {
+    return this.height - this.standardPadding() * 2;
 };
 
-CY_Window_CharActions.prototype.drawItem = function (index) {
-    var rect = this.itemRectForText(index);
-    var align = this.itemTextAlign();
-    this.resetTextColor();
-    this.changePaintOpacity(this.isCommandEnabled(index));
+// Robust Navigation Handlers
+CY_Window_CharPickActions.prototype.cursorRight = function (wrap) {
+    if (this.maxItems() <= 1) return;
+    this.select((this.index() + 1) % this.maxItems());
+    SoundManager.playCursor();
+};
 
-    // Custom drawing for visibility
-    this.contents.fontSize = 24; // Larger Text
+CY_Window_CharPickActions.prototype.cursorLeft = function (wrap) {
+    if (this.maxItems() <= 1) return;
+    this.select((this.index() - 1 + this.maxItems()) % this.maxItems());
+    SoundManager.playCursor();
+};
 
-    if (index === this.index()) {
+CY_Window_CharPickActions.prototype.drawItem = function (index) {
+    var rect = this.itemRect(index);
+    var isSelected = (index === this.index());
+
+    this.contents.fontSize = 24;
+
+    if (isSelected) {
         this.changeTextColor(CY_System.Colors.cyan || '#00FFFF');
     } else {
         this.changeTextColor(CY_System.Colors.white || '#FFFFFF');
     }
 
-    // Vertically center text in the larger item height
+    // Vertically center
     var yOffset = (rect.height - this.contents.fontSize - 4) / 2;
-    this.drawText(this.commandName(index), rect.x, rect.y + yOffset, rect.width, align);
-};
+    this.drawText(this._commands[index], rect.x, rect.y + yOffset, rect.width, 'center');
 
-// Use standard drawItem but maybe customize colors? 
-// Default is fine for now, will inherit CY_Window_Selectable styling if mixin is applied?
-// Window_HorzCommand inherits from Window_Command -> Window_Selectable. 
-// CY system usually patches Window_Selectable.
+    this.resetFontSettings();
+};
 
 //-----------------------------------------------------------------------------
 // CY_Scene_CharacterPick
@@ -103,28 +108,28 @@ CY_Scene_CharacterPick.prototype.initialize = function () {
 CY_Scene_CharacterPick.prototype.getCharacterData = function () {
     return [
         {
-            name: "Crisis", image: "Crisis Right", classes: "Program / Robotic / Burst",
-            stats: { HP: 450, EN: 100, ATK: 6, DEF: 3, HEAL: 3, SDEF: 4, ENA: 5, LUCK: 6 }
-        },
-        {
             name: "Chaos Cros", image: "FCroc Right", classes: "Program / Robotic / Tank",
             stats: { HP: 600, EN: 150, ATK: 5, DEF: 3, HEAL: 2, SDEF: 4, ENA: 3, LUCK: 3 }
         },
         {
-            name: "R.D.", image: "Dash Right", classes: "Magic / Organic / Burst",
-            stats: { HP: 350, EN: 50, ATK: 3, DEF: 4, HEAL: 5, SDEF: 5, ENA: 7, LUCK: 2 }
+            name: "Tails-Ko", image: "Tails Right", classes: "Tools / Organic / Support",
+            stats: { HP: 500, EN: 50, ATK: 2, DEF: 2, HEAL: 4, SDEF: 5, ENA: 7, LUCK: 10 }
         },
         {
-            name: "D.D.", image: "DD Right", classes: "Magic / Organic / Support",
-            stats: { HP: 600, EN: 100, ATK: 2, DEF: 3, HEAL: 10, SDEF: 5, ENA: 7, LUCK: 7 }
+            name: "Crisis", image: "Crisis Right", classes: "Program / Robotic / Burst",
+            stats: { HP: 450, EN: 100, ATK: 6, DEF: 3, HEAL: 3, SDEF: 4, ENA: 5, LUCK: 6 }
+        },
+        {
+            name: "Q-Bee", image: "Bee Right", classes: "Magic / Organic / Burst",
+            stats: { HP: 500, EN: 100, ATK: 3, DEF: 3, HEAL: 3, SDEF: 2, ENA: 6, LUCK: 4 }
         },
         {
             name: "Makato", image: "Makoto Right", classes: "Magic / Organic / Burst",
             stats: { HP: 500, EN: 100, ATK: 5, DEF: 1, HEAL: 1, SDEF: 2, ENA: 4, LUCK: 2 }
         },
         {
-            name: "Q-Bee", image: "Bee Right", classes: "Magic / Organic / Burst",
-            stats: { HP: 500, EN: 100, ATK: 3, DEF: 3, HEAL: 3, SDEF: 2, ENA: 6, LUCK: 4 }
+            name: "Shantae", image: "Shantae Right", classes: "Magic / Organic / Support",
+            stats: { HP: 550, EN: 150, ATK: 2, DEF: 2, HEAL: 6, SDEF: 5, ENA: 5, LUCK: 7 }
         },
         {
             name: "Zetta Zepto", image: "Zetta Right", classes: "Tools / Organic / Support",
@@ -135,12 +140,12 @@ CY_Scene_CharacterPick.prototype.getCharacterData = function () {
             stats: { HP: 650, EN: 50, ATK: 3, DEF: 3, HEAL: 3, SDEF: 1, ENA: 8, LUCK: 4 }
         },
         {
-            name: "Shantae", image: "Shantae Right", classes: "Magic / Organic / Support",
-            stats: { HP: 550, EN: 150, ATK: 2, DEF: 2, HEAL: 6, SDEF: 5, ENA: 5, LUCK: 7 }
+            name: "R.D.", image: "Dash Right", classes: "Magic / Organic / Burst",
+            stats: { HP: 350, EN: 50, ATK: 3, DEF: 4, HEAL: 5, SDEF: 5, ENA: 7, LUCK: 2 }
         },
         {
-            name: "Tails-Ko", image: "Tails Right", classes: "Tools / Organic / Support",
-            stats: { HP: 500, EN: 50, ATK: 2, DEF: 2, HEAL: 4, SDEF: 5, ENA: 7, LUCK: 10 }
+            name: "D.D.", image: "DD Right", classes: "Magic / Organic / Support",
+            stats: { HP: 600, EN: 100, ATK: 2, DEF: 3, HEAL: 10, SDEF: 5, ENA: 7, LUCK: 7 }
         }
     ];
 };
@@ -348,10 +353,10 @@ CY_Scene_CharacterPick.prototype.createCharacterSprite = function () {
     };
 
     // 2. Debug Green Border
-    var debug = new PIXI.Graphics();
-    debug.lineStyle(2, 0x00FF00, 0.5);
-    debug.drawRect(this._charArea.x, this._charArea.y, this._charArea.w, this._charArea.h);
-    this.addChild(debug);
+    // var debug = new PIXI.Graphics();
+    // debug.lineStyle(2, 0x00FF00, 0.5);
+    // debug.drawRect(this._charArea.x, this._charArea.y, this._charArea.w, this._charArea.h);
+    // this.addChild(debug);
 
     // 3. Sprite
     this._characterSprite = new Sprite();
@@ -386,7 +391,7 @@ CY_Scene_CharacterPick.prototype.createRightPanel = function () {
     this._panelBg = new PIXI.Graphics();
 
     var bgColor = parseInt("0E0E18", 16);
-    var redBorder = parseInt("441618", 16); // This is the "Left Red Padding" color or just border? 
+    var redBorder = parseInt("441618", 16); // This is the "Left Red Padding" color or just border?
     // Usually "Left Red Padding" means a thick stripe on the left.
     // Let's assume the user wants a thick left border of 24px.
 
@@ -428,12 +433,21 @@ CY_Scene_CharacterPick.prototype.createCommandWindow = function () {
     var x = Graphics.width - w - 40;
     var y = Graphics.height - h - 20;
 
-    this._commandWindow = new CY_Window_CharActions(x, y);
-    this._commandWindow.setHandler('next', this.onNext.bind(this));
-    this._commandWindow.setHandler('select', this.onSelect.bind(this));
+    this._commandWindow = new CY_Window_CharPickActions(x, y, w, h);
+    this._commandWindow.setHandler('ok', this.onCommandOk.bind(this));
     this._commandWindow.setHandler('cancel', this.popScene.bind(this));
 
+    this._commandWindow.activate();
     this.addWindow(this._commandWindow);
+};
+
+CY_Scene_CharacterPick.prototype.onCommandOk = function () {
+    var index = this._commandWindow.index();
+    if (index === 0) {
+        this.onNext();
+    } else {
+        this.onSelect();
+    }
 };
 
 CY_Scene_CharacterPick.prototype.onNext = function () {
@@ -458,9 +472,6 @@ CY_Scene_CharacterPick.prototype.onSelect = function () {
 
     if (this._selectedRecruits.length >= 3) {
         // Done
-        // Proceed to game?
-        // For now, pop scene or show completion
-        // Maybe start new game?
         DataManager.setupNewGame();
         SceneManager.goto(Scene_Map);
     } else {
@@ -538,6 +549,39 @@ CY_Scene_CharacterPick.prototype.refreshInfo = function () {
         this.addStatRow(key, val, 0, y, isBar);
         y += 32;
     });
+
+    // Backstory Section
+    y += 10;
+
+    // Separator
+    var divY2 = y;
+    var gfx2 = new PIXI.Graphics();
+    gfx2.lineStyle(1, 0x441618);
+    gfx2.moveTo(0, divY2);
+    gfx2.lineTo(panelW - 20, divY2);
+    this._textContainer.addChild(gfx2);
+
+    y += 20;
+
+    // Backstory Title
+    this.addText("BACKSTORY", 0, y, 14, 0x882222);
+    y += 24;
+
+    // Backstory Text
+    var backstory = "A former corporate netrunner who went rogue after the Silicon V crash. Specializes in rapid ICE breaking and combat support protocols.";
+
+    var styleDesc = {
+        fontFamily: "GameFont",
+        fontSize: 16,
+        fill: 0x55CCFF,
+        align: "left",
+        wordWrap: true,
+        wordWrapWidth: panelW - 40
+    };
+    var desc = new PIXI.Text(backstory, styleDesc);
+    desc.x = 0;
+    desc.y = y;
+    this._textContainer.addChild(desc);
 };
 
 CY_Scene_CharacterPick.prototype.addText = function (text, x, y, size, color) {

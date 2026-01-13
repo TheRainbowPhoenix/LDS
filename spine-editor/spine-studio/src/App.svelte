@@ -1,55 +1,69 @@
 <script lang="ts">
-  import { onMount, tick } from "svelte";
+  import { onMount } from "svelte";
   import { SpineRenderer } from "./lib/SpineRenderer";
-  import { SpineParser, type SpineData } from "./lib/SpineParser";
+  // Import the loader side-effects so Pixi knows how to load Spine assets
+  import "./lib/spine-pixi/loader-3.8";
+
   import { skeletonData, selectedNode } from "./lib/Store";
+  import { undo, redo } from "./lib/Store";
 
   import Toolbar from "./lib/components/Toolbar.svelte";
-  import TreeView, {
-    type TreeItemData,
-  } from "./lib/components/TreeView.svelte";
   import LeftSidebar from "./lib/components/LeftSidebar.svelte";
   import PropertyPanel from "./lib/components/PropertyPanel.svelte";
   import ZoomControls from "./lib/components/ZoomControls.svelte";
+
+  // Use 'any' for the data types to avoid strict type conflicts with the runtime for now
+  // In a full implementation we would import the specific interfaces from spine-pixi
+  type TreeItemData = {
+    id: string;
+    title: string;
+    type: string;
+    children?: TreeItemData[];
+  };
 
   let canvas: HTMLCanvasElement;
   let renderer: SpineRenderer;
   let mode: "design" | "animate" = "design";
   let treeItems: TreeItemData[] = [];
 
-  // Transform Helper for TreeView
-  function buildTreeData(data: SpineData): TreeItemData[] {
-    // 1. Find Root Bone
-    const rootBone = data.bones.find((b) => !b.parent);
+  // Transform Helper for TreeView (Adapted for Runtime Data)
+  function buildTreeData(data: any): TreeItemData[] {
+    // data is pixi_spine.core.SkeletonData
+    // bones is Array<BoneData>
+
+    // 1. Find Root Bone (bone with no parent)
+    const rootBoneData = data.bones.find((b: any) => !b.parent);
 
     // Recursive builder for bones
-    function buildBoneTree(bone: any): TreeItemData {
+    function buildBoneTree(boneData: any): TreeItemData {
+      // Find children bones: bones whose parent matches this bone
       const children = data.bones
-        .filter((b) => b.parent === bone.name)
-        .map((b) => buildBoneTree(b));
+        .filter((b: any) => b.parent === boneData)
+        .map((b: any) => buildBoneTree(b));
 
       // Find Slots for this bone
-      const slots = data.slots.filter((s) => s.bone === bone.name);
+      // slotData.boneData === boneData
+      const slots = data.slots.filter((s: any) => s.boneData === boneData);
 
-      const slotNodes = slots.map((slot) => {
+      const slotNodes = slots.map((slot: any) => {
         // Find active attachment (or all available in default skin)
         const childrenAtt: TreeItemData[] = [];
 
         // Look in default skin
-        const defaultSkin = data.skins.find((s) => s.name === "default");
-        if (defaultSkin) {
-          const startObs = defaultSkin.attachments.get(slot.name);
-          if (startObs) {
-            startObs.forEach((att: any, key: string) => {
-              // Check if this is the active attachment?
-              // For Tree view, we might want to list all, but emphasize active.
-              // Or just list ALL known attachments for this slot.
+        const slotIndex = slot.index;
+
+        // Quick iteration to find attachments in default skin
+        if (data.defaultSkin) {
+          const attachments = data.defaultSkin.attachments[slotIndex];
+          if (attachments) {
+            // In 3.8 JS runtime, attachments might be a Map or Object key-value pairs
+            for (const key in attachments) {
               childrenAtt.push({
-                id: `${slot.name}:${att.name}`,
-                title: att.name,
+                id: `${slot.name}:${attachments[key].name}`,
+                title: attachments[key].name,
                 type: "attachment",
               });
-            });
+            }
           }
         }
 
@@ -65,14 +79,14 @@
       const combinedChildren = [...slotNodes, ...children];
 
       return {
-        id: bone.name,
-        title: bone.name,
+        id: boneData.name,
+        title: boneData.name,
         type: "bone",
         children: combinedChildren.length > 0 ? combinedChildren : undefined,
       };
     }
 
-    const boneTree = rootBone ? [buildBoneTree(rootBone)] : [];
+    const boneTree = rootBoneData ? [buildBoneTree(rootBoneData)] : [];
 
     // Top Level Hierarchy
     return [
@@ -89,16 +103,12 @@
         children: [],
       },
       { id: "draw-order", title: "Draw Order", type: "folder", children: [] },
-      { id: "skins", title: "Skins", type: "skin", children: [] },
-      { id: "events", title: "Events", type: "event", children: [] },
       {
         id: "animations",
         title: "Animations",
         type: "animation",
         children: [],
       },
-      { id: "images", title: "Images", type: "image", children: [] },
-      { id: "audio", title: "Audio", type: "audio", children: [] },
     ];
   }
 
@@ -110,15 +120,15 @@
   // Reactive: Selection handling
   let selectedId: string | null = null;
   $: if (selectedId) {
-    // Can be Bone or Slot now.
-    const bone = $skeletonData?.bones.find((b) => b.name === selectedId);
-    if (bone) selectedNode.set(bone);
-    else {
-      // Maybe slot?
-      const slot = $skeletonData?.slots.find((s) => s.name === selectedId);
-      if (slot) {
-        // selectedNode.set(slot); // Need store to handle Slot selection too?
-        // For MVP, focus on Bones.
+    if (renderer && renderer.spine) {
+      // Try finding bone
+      const bone = renderer.spine.skeleton.findBone(selectedId);
+      if (bone) {
+        selectedNode.set(bone); // Sets the Runtime Bone object
+      } else {
+        // Maybe it's a slot?
+        // const slot = renderer.spine.skeleton.findSlot(selectedId);
+        // if (slot) selectedNode.set(slot);
       }
     }
   }
@@ -127,51 +137,19 @@
     // 1. Init Renderer
     if (canvas) {
       renderer = new SpineRenderer(canvas);
-      // Force resize once mounted and layout is stable
-      setTimeout(
-        () =>
-          renderer.app.renderer.resize(canvas.offsetWidth, canvas.offsetHeight),
-        100,
+
+      // Force loading the spineboy asset
+      // Note: We use the paths relative to 'public' folder
+      await renderer.loadSkeleton(
+        "/spines/spineboy-pro.json",
+        "/spines/spineboy-pro.atlas",
       );
 
-      // Resize observer for the canvas container
-      const resizeObserver = new ResizeObserver(() => {
-        renderer.app.renderer.resize(canvas.offsetWidth, canvas.offsetHeight);
-        renderer.rootContainer.position.set(
-          canvas.offsetWidth / 2,
-          canvas.offsetHeight * 0.8,
-        );
-      });
-      resizeObserver.observe(canvas.parentElement!);
-    }
-
-    // 2. Load Data (MVP Hardcoded)
-    try {
-      // JSON
-      const response = await fetch("/spines/spineboy-pro.json");
-      const json = await response.json();
-      const data = SpineParser.parseSkeleton(json);
-      skeletonData.set(data);
-
-      // Atlas
-      const atlasResp = await fetch("/spines/spineboy-pro.atlas");
-      const atlasText = await atlasResp.text();
-      const atlas = SpineParser.parseAtlas(atlasText);
-      console.log("Atlas loaded", atlas);
-
-      // Image
-      await renderer.loadTexture(atlas, "/spines/spineboy-pro.png");
-
-      // 3. Render
-      renderer.loadSkeleton(data);
-      console.log("Spine loaded", data);
-    } catch (e) {
-      console.error("Failed to load spine:", e);
+      console.log("App Mounted and Skeleton Loaded");
     }
   });
 
   // Global Shortcuts
-  import { undo, redo } from "./lib/Store";
   function onKeyDown(e: KeyboardEvent) {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
       e.preventDefault();

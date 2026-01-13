@@ -1,8 +1,12 @@
 import { writable, get } from 'svelte/store';
-import type { SpineData, BoneData, SlotData } from './SpineParser';
+import { type SkeletonData } from './spine-pixi/runtime-3.8/core/SkeletonData';
+import { type Bone } from './spine-pixi/runtime-3.8/core/Bone';
+import { type Slot } from './spine-pixi/runtime-3.8/core/Slot';
+import { type BoneData } from './spine-pixi/runtime-3.8/core/BoneData';
+import { type SlotData } from './spine-pixi/runtime-3.8/core/SlotData';
 
-export const skeletonData = writable<SpineData | null>(null);
-export const selectedNode = writable<BoneData | SlotData | null>(null);
+export const skeletonData = writable<SkeletonData | null>(null);
+export const selectedNode = writable<Bone | Slot | BoneData | SlotData | null>(null);
 export const renderingScale = writable<number>(1.0);
 export const currentTool = writable<'select' | 'translate' | 'rotate' | 'scale'>('select');
 

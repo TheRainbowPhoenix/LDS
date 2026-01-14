@@ -193,10 +193,18 @@
     };
 
     CY_Scene_Lobby.prototype.createTopBar = function () {
+        // Full width bar (unscaled coordinates)
         var bar = new PIXI.Graphics();
         bar.beginFill(0x000000, 0.6);
-        bar.drawRect(0, 0, Graphics.width, 60);
+        bar.drawRect(0, 0, Graphics.width / (this._uiScale || 1.0), 60);
         bar.endFill();
+        
+        // Red bottom border like in CY_Scene_File
+        var redColor = parseInt((this.Colors.lightRed || '#FF6158').replace('#', ''), 16);
+        bar.beginFill(redColor);
+        bar.drawRect(0, 58, Graphics.width / (this._uiScale || 1.0), 2);
+        bar.endFill();
+        
         this._lobbyContainer.addChild(bar);
 
         var style = { fontFamily: 'GameFont', fontSize: 20, fill: 0xFFFFFF };
@@ -206,7 +214,7 @@
         this._lobbyContainer.addChild(txt);
 
         // Currencies
-        var curX = Graphics.width - 300;
+        var curX = (Graphics.width / (this._uiScale || 1.0)) - 300;
         var txt2 = new PIXI.Text("💎 265   💰 98215", style);
         txt2.x = curX;
         txt2.y = 15;
@@ -229,20 +237,21 @@
         var members = $gameParty.members();
         var scale = this._uiScale || 1.0;
 
-        // Define a "Box" area for characters on the left side
-        // Base positions at 1.0 scale
-        var baseBoxX = 400;
+        // Expand the character area by 10% for larger images
+        // Allow 10% overlap with command window on right
+        // Allow 10% cut-off on left for right character
+        var baseBoxX = 440; // Shifted right by 10% (was 400)
         var baseBoxY = Graphics.height;
 
         // Apply scale to positioning
         var boxX = baseBoxX * scale;
         var boxY = baseBoxY;
 
-        // Base spacing at 1.0 scale
+        // Increased spacing by 10% for larger spread
         var basePositions = [
-            { x: 0, y: 0, scale: 1.0, z: 2 }, // Center
-            { x: -220, y: -20, scale: 0.85, z: 1 }, // Left
-            { x: 220, y: -20, scale: 0.85, z: 1 }  // Right
+            { x: 0, y: 0, scale: 1.1, z: 2 }, // Center (10% larger)
+            { x: -242, y: -22, scale: 0.935, z: 1 }, // Left (10% more offset, 10% larger)
+            { x: 242, y: -22, scale: 0.935, z: 1 }  // Right (10% more offset, 10% larger)
         ];
 
         // Sort members to draw back-most first (Painter's Algorithm)

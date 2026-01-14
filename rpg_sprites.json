@@ -13,6 +13,7 @@
   "js/rpg_sprites/sprite_balloon.js",
   "js/rpg_sprites/sprite_picture.js",
   "js/rpg_sprites/sprite_timer.js",
+  "js/rpg_sprites/sprite_gauge.js",
   "js/rpg_sprites/sprite_destination.js",
   "js/rpg_sprites/spriteset_base.js",
   "js/rpg_sprites/spriteset_map.js",

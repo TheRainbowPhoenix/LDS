@@ -14,6 +14,14 @@
   "js/plugins/cy_ui/CY_Scene_Options.js",
   "js/plugins/cy_ui/CY_Scene_File.js",
   "js/plugins/cy_ui/CY_Scene_CharacterPick.js",
+  "js/plugins/cy_ui/CY_Scene_Dialog.js",
+  "js/plugins/cy_ui/CY_Scene_Lobby.js",
+  "js/plugins/cy_ui/CY_Game_Battler.js",
+  "js/plugins/cy_ui/CY_Game_Enemy.js",
+  "js/plugins/cy_ui/CY_Window_ActorCommand.js",
+  "js/plugins/cy_ui/CY_Sprite_Battler.js",
+  "js/plugins/cy_ui/CY_Spriteset_Battle.js",
+  "js/plugins/cy_ui/CY_Scene_Battle.js",
   "js/plugins/cy_ui/CY_Main.js",
   "js/plugins/cy_ui/_footer.js"
 ]

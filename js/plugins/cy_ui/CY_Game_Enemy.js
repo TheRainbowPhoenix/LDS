@@ -128,11 +128,17 @@ Game_Enemy.prototype.makeActions = function () {
 
 CY_Game_Enemy.setupTroopFormatted = function () {
     // Layout constants
+    // Use UI scale from scene if available
+    var scale = 1.0;
+    if (SceneManager._scene && typeof SceneManager._scene._uiScale === 'number') {
+        scale = SceneManager._scene._uiScale;
+    }
+
     const cols = 3;
-    const startX = Graphics.boxWidth - 80;
+    const startX = Graphics.boxWidth - (80 * scale);
     const startY = Graphics.boxHeight * 0.55;
-    const hSpacing = 180;
-    const vSpacing = 120;
+    const hSpacing = 180 * scale;
+    const vSpacing = 120 * scale;
 
     const enemies = $gameTroop.members();
     console.log("CY_Game_Enemy.setupTroopFormatted: Re-positioning " + enemies.length + " enemies");

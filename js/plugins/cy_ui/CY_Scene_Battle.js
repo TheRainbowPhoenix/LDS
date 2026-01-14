@@ -11,6 +11,113 @@ CY_Scene_Battle.prototype.constructor = CY_Scene_Battle;
 
 CY_Scene_Battle.prototype.initialize = function () {
     Scene_Battle.prototype.initialize.call(this);
+    this.updateUIScale();
+};
+
+CY_Scene_Battle.prototype.updateUIScale = function () {
+    var w = Graphics.width;
+    var h = Graphics.height;
+    this._uiScale = 1.0;
+
+    if (w < 1600 || h < 800) {
+        // Calculate ratio
+        // We want to scale down fairly aggressively if it's small (e.g. 1280x720)
+        // 1280 / 1920 = 0.66
+        var scaleW = w / 1600;
+        var scaleH = h / 800;
+        this._uiScale = Math.min(scaleW, scaleH);
+
+        // Ensure it doesn't get too tiny or weird
+        this._uiScale = Math.max(0.6, this._uiScale);
+    }
+};
+
+CY_Scene_Battle.prototype.resize = function () {
+    Scene_Battle.prototype.resize.call(this);
+    this.updateUIScale();
+
+    // Recreate Spriteset content (Full recreate as requested)
+    if (this._spriteset) {
+        this._spriteset.recreateForResize(this._uiScale);
+        this._spriteset.width = Graphics.width;
+        this._spriteset.height = Graphics.height;
+    }
+
+    // Recreate all windows to handle resizing properly ("keeping the data states")
+    this.recreateAllWindows();
+};
+
+CY_Scene_Battle.prototype.recreateAllWindows = function () {
+    // 1. Capture State
+    const state = {
+        actorCmd: {
+            active: this._actorCommandWindow && this._actorCommandWindow.active,
+            index: this._actorCommandWindow ? this._actorCommandWindow.index() : -1,
+            visible: this._actorCommandWindow && this._actorCommandWindow.visible
+        },
+        enemyWnd: {
+            active: this._enemyWindow && this._enemyWindow.active,
+            index: this._enemyWindow ? this._enemyWindow.index() : -1,
+            visible: this._enemyWindow && this._enemyWindow.visible
+        },
+        partyCmd: {
+            active: this._partyCommandWindow && this._partyCommandWindow.active,
+            visible: this._partyCommandWindow && this._partyCommandWindow.visible
+        },
+        // We can capture more if needed (skill window, item window, etc)
+        // For battle test basic flow, these are most critical.
+    };
+
+    // 2. Destroy Old Windows
+    if (this._windowLayer) {
+        this._windowLayer.removeChildren();
+    }
+    // Also buttons are usually added to scene or window layer? 
+    // In createButtons -> addWindow -> adds to _windowLayer.
+    // So removing children of _windowLayer should clear them.
+    // Re-null references to be safe
+    this._actorCommandWindow = null;
+    this._enemyWindow = null;
+    this._statusWindow = null;
+    this._partyCommandWindow = null;
+    this._skillWindow = null;
+    this._itemWindow = null;
+    this._actorWindow = null;
+    this._helpWindow = null;
+    this._messageWindow = null;
+    this._scrollTextWindow = null;
+    this._cancelButton = null;
+    this._menuButton = null;
+
+    // 3. Create All Windows Again
+    this.createAllWindows();
+
+    // 4. Restore State & Relink
+    if (state.actorCmd.active) {
+        this._actorCommandWindow.activate();
+        this._actorCommandWindow.select(state.actorCmd.index);
+    } else {
+        this._actorCommandWindow.deactivate();
+    }
+    this._actorCommandWindow.visible = state.actorCmd.visible;
+
+    if (state.enemyWnd.active) {
+        this._enemyWindow.activate();
+        this._enemyWindow.select(state.enemyWnd.index);
+    } else {
+        this._enemyWindow.deactivate();
+    }
+    this._enemyWindow.visible = state.enemyWnd.visible;
+
+    if (state.partyCmd.active) {
+        this._partyCommandWindow.activate();
+    } else {
+        this._partyCommandWindow.deactivate();
+    }
+    this._partyCommandWindow.visible = state.partyCmd.visible;
+
+    // Refresh status
+    if (this._statusWindow) this._statusWindow.refresh();
 };
 
 CY_Scene_Battle.prototype.create = function () {

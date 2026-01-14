@@ -215,6 +215,7 @@ CY_Scene_Battle.prototype.createSpriteset = function () {
 // Override Window Creation to use customized windows
 CY_Scene_Battle.prototype.createAllWindows = function () {
     this.createLogWindow();
+    this.createBattleHUD(); // New Static HUD
     this.createStatusWindow();
     this.createPartyCommandWindow();
     this.createActorCommandWindow();
@@ -227,6 +228,19 @@ CY_Scene_Battle.prototype.createAllWindows = function () {
     this.createScrollTextWindow();
     this.createButtons(); // From CorruptBattleLine
 };
+
+CY_Scene_Battle.prototype.createBattleHUD = function () {
+    // HUD takes up bottom 220px (placeholder size)
+    const h = 220;
+    const w = Graphics.boxWidth;
+    const x = 0;
+    const y = Graphics.boxHeight - h;
+
+    this._battleHUDWindow = new CY_Window_BattleHUD(x, y, w, h);
+    this.addWindow(this._battleHUDWindow);
+};
+
+
 
 CY_Scene_Battle.prototype.createActorCommandWindow = function () {
     this._actorCommandWindow = new CY_Window_ActorCommand();

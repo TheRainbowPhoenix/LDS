@@ -546,7 +546,7 @@ CY_Scene_Title.prototype.createCommandWindow = function () {
     this._commandWindow.setHandler('continue', this.commandContinue.bind(this));
     this._commandWindow.setHandler('loadGame', this.commandLoadGame.bind(this));
     this._commandWindow.setHandler('options', this.commandOptions.bind(this));
-    this._commandWindow.setHandler('credits', this.commandCredits.bind(this));
+    this._commandWindow.setHandler('battleTest', this.commandBattleTest.bind(this));
     this._commandWindow.setHandler('phaser', this.commandPhaser.bind(this));
     this._commandWindow.setHandler('charPick', this.commandCharPick.bind(this));
     this._commandWindow.setHandler('spine', this.commandSpine.bind(this));
@@ -620,12 +620,36 @@ CY_Scene_Title.prototype.commandOptions = function () {
 };
 
 /**
- * Handle Credits command.
- * Currently reactivates the command window (credits scene can be implemented later).
+ * Handle Battle Test command.
+ * Launches CY_Scene_Battle with test actors/enemies.
  */
-CY_Scene_Title.prototype.commandCredits = function () {
-    // Credits scene placeholder - reactivate command window for now
-    this._commandWindow.activate();
+CY_Scene_Title.prototype.commandBattleTest = function () {
+    this._commandWindow.close();
+    this.fadeOutAll();
+
+    // Initialize basic game data
+    DataManager.setupNewGame();
+
+    // Setup Test Party (Actors 1, 2, 3)
+    $gameParty._actors = [];
+    $gameParty.addActor(1);
+    $gameParty.addActor(2);
+    $gameParty.addActor(3);
+
+    // Setup Battle Manager with dummy troop
+    BattleManager.setup(1, true, true);
+    BattleManager.setBattleTest(true);
+
+    // Setup Test Troop (Enemies 1, 2, 3)
+    $gameTroop._enemies = [];
+    for (var i = 1; i <= 3; i++) {
+        var enemy = new Game_Enemy(i, 0, 0);
+        $gameTroop._enemies.push(enemy);
+    }
+    $gameTroop.makeUniqueNames();
+
+    // Launch CY Battle Scene
+    SceneManager.push(CY_Scene_Battle);
 };
 
 CY_Scene_Title.prototype.commandPhaser = function () {

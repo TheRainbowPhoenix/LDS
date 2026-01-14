@@ -30,23 +30,23 @@ CY_Window_ActorCommand.prototype.numVisibleRows = function () {
     return 1;
 };
 
-// Fixed size to match a 120x120 icon (tweakable via globalThis._UI.ATK_BTN_SZ)
+// Fixed size to match a 120x120 icon (tweakable via CY_System._UI.ATK_BTN_SZ)
 CY_Window_ActorCommand.prototype.windowWidth = function () {
-    const btnSz = (globalThis._UI && globalThis._UI.ATK_BTN_SZ) || 96;
+    const btnSz = (CY_System._UI && CY_System._UI.ATK_BTN_SZ) || 96;
     return btnSz * this.maxCols();
 };
 
 CY_Window_ActorCommand.prototype.windowHeight = function () {
-    const btnSz = (globalThis._UI && globalThis._UI.ATK_BTN_SZ) || 96;
+    const btnSz = (CY_System._UI && CY_System._UI.ATK_BTN_SZ) || 96;
     return btnSz * this.numVisibleRows();
 };
 
 CY_Window_ActorCommand.prototype.itemWidth = function () {
-    return (globalThis._UI && globalThis._UI.ATK_BTN_SZ) || 96;
+    return (CY_System._UI && CY_System._UI.ATK_BTN_SZ) || 96;
 };
 
 CY_Window_ActorCommand.prototype.itemHeight = function () {
-    return (globalThis._UI && globalThis._UI.ATK_BTN_SZ) || 96;
+    return (CY_System._UI && CY_System._UI.ATK_BTN_SZ) || 96;
 };
 
 CY_Window_ActorCommand.prototype.makeCommandList = function () {
@@ -80,8 +80,8 @@ CY_Window_ActorCommand.prototype.drawItem = function (index) {
     this.changePaintOpacity(this.isCommandEnabled(index));
 
     const symbol = this.commandSymbol(index);
-    const pw = (globalThis._UI && globalThis._UI.ATK_BTN_SZ) || 96;
-    const ph = (globalThis._UI && globalThis._UI.ATK_BTN_SZ) || 96;
+    const pw = (CY_System._UI && CY_System._UI.ATK_BTN_SZ) || 96;
+    const ph = (CY_System._UI && CY_System._UI.ATK_BTN_SZ) || 96;
 
     let idx = this.iconIndexForSymbol(symbol);
     const ax = 0 + pw * (idx % this.maxCols());

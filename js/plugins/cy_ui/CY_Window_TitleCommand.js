@@ -293,7 +293,7 @@ CY_Window_TitleCommand.prototype.makeCommandList = function () {
     this.addCommand('NEW GAME', 'newGame', true);
     this.addCommand('LOAD GAME', 'loadGame', true);
     this.addCommand('SETTINGS', 'options', true);
-    this.addCommand('CREDITS', 'credits', true);
+    this.addCommand('BATTLE TEST', 'battleTest', true);
     this.addCommand('PHASER', 'phaser', true);
     this.addCommand('TEAM PICK', 'charPick', true);
     this.addCommand('SPINE', 'spine', true);

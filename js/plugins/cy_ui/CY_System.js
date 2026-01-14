@@ -35,6 +35,11 @@ CY_System.Colors = {
     yellow: '#f0f000'                   // Warning/special
 };
 
+// Global UI Constants
+CY_System._UI = {
+    ATK_BTN_SZ: 96
+};
+
 //-----------------------------------------------------------------------------
 // Constants
 //-----------------------------------------------------------------------------
@@ -67,12 +72,12 @@ CY_System.HIGHLIGHT_SPEED = 4;
  * @param {string} color - Fill color (CSS color string)
  * @param {number} [cutSize] - Size of the corner cut in pixels (default: CORNER_CUT)
  */
-CY_System.drawCutCornerRect = function(bitmap, x, y, w, h, color, cutSize) {
+CY_System.drawCutCornerRect = function (bitmap, x, y, w, h, color, cutSize) {
     cutSize = cutSize || CY_System.CORNER_CUT;
-    
+
     // Ensure cutSize doesn't exceed rectangle dimensions
     cutSize = Math.min(cutSize, w, h);
-    
+
     var ctx = bitmap._context;
     ctx.save();
     ctx.fillStyle = color;
@@ -101,13 +106,13 @@ CY_System.drawCutCornerRect = function(bitmap, x, y, w, h, color, cutSize) {
  * @param {number} [lineWidth] - Width of the border line (default: 2)
  * @param {number} [cutSize] - Size of the corner cut in pixels (default: CORNER_CUT)
  */
-CY_System.drawCutCornerBorder = function(bitmap, x, y, w, h, color, lineWidth, cutSize) {
+CY_System.drawCutCornerBorder = function (bitmap, x, y, w, h, color, lineWidth, cutSize) {
     cutSize = cutSize || CY_System.CORNER_CUT;
     lineWidth = lineWidth || 2;
-    
+
     // Ensure cutSize doesn't exceed rectangle dimensions
     cutSize = Math.min(cutSize, w, h);
-    
+
     var ctx = bitmap._context;
     ctx.save();
     ctx.strokeStyle = color;
@@ -136,12 +141,12 @@ CY_System.drawCutCornerBorder = function(bitmap, x, y, w, h, color, lineWidth, c
  * @param {string} color - Fill color (CSS color string)
  * @param {number} [cutSize] - Size of the corner cut in pixels (default: CORNER_CUT)
  */
-CY_System.drawCutCornerRectLeft = function(bitmap, x, y, w, h, color, cutSize) {
+CY_System.drawCutCornerRectLeft = function (bitmap, x, y, w, h, color, cutSize) {
     cutSize = cutSize || CY_System.CORNER_CUT;
-    
+
     // Ensure cutSize doesn't exceed rectangle dimensions
     cutSize = Math.min(cutSize, w, h);
-    
+
     var ctx = bitmap._context;
     ctx.save();
     ctx.fillStyle = color;
@@ -170,29 +175,29 @@ CY_System.drawCutCornerRectLeft = function(bitmap, x, y, w, h, color, cutSize) {
  * @param {number} [cornerSize] - Size of the L corner (default: 8)
  * @param {number} [lineWidth] - Width of the lines (default: 2)
  */
-CY_System.drawCornerHints = function(bitmap, x, y, w, h, color, cornerSize, lineWidth) {
+CY_System.drawCornerHints = function (bitmap, x, y, w, h, color, cornerSize, lineWidth) {
     cornerSize = cornerSize || 8;
     lineWidth = lineWidth || 2;
-    
+
     var ctx = bitmap._context;
     ctx.save();
     ctx.strokeStyle = color;
     ctx.lineWidth = lineWidth;
-    
+
     // Top-right corner (L rotated)
     ctx.beginPath();
     ctx.moveTo(x + w - cornerSize, y);
     ctx.lineTo(x + w, y);
     ctx.lineTo(x + w, y + cornerSize);
     ctx.stroke();
-    
+
     // Bottom-left corner (L shape)
     ctx.beginPath();
     ctx.moveTo(x, y + h - cornerSize);
     ctx.lineTo(x, y + h);
     ctx.lineTo(x + cornerSize, y + h);
     ctx.stroke();
-    
+
     ctx.restore();
     bitmap._baseTexture.update();
 };
@@ -206,32 +211,32 @@ CY_System.drawCornerHints = function(bitmap, x, y, w, h, color, cornerSize, line
  * Extend ConfigManager to include CRT shader setting.
  * Default value is true (CRT shader enabled).
  */
-(function() {
+(function () {
     // Store original makeData
     var _ConfigManager_makeData = ConfigManager.makeData;
-    ConfigManager.makeData = function() {
+    ConfigManager.makeData = function () {
         var config = _ConfigManager_makeData.call(this);
         config.crtShader = this.crtShader;
         return config;
     };
-    
+
     // Store original applyData
     var _ConfigManager_applyData = ConfigManager.applyData;
-    ConfigManager.applyData = function(config) {
+    ConfigManager.applyData = function (config) {
         _ConfigManager_applyData.call(this, config);
         // Default to true if not set
         this.crtShader = this.readFlag(config, 'crtShader', true);
     };
-    
+
     // Helper to read flag with default value
-    ConfigManager.readFlag = ConfigManager.readFlag || function(config, name, defaultValue) {
+    ConfigManager.readFlag = ConfigManager.readFlag || function (config, name, defaultValue) {
         if (name in config) {
             return !!config[name];
         } else {
             return defaultValue;
         }
     };
-    
+
     // Initialize default value
     if (ConfigManager.crtShader === undefined) {
         ConfigManager.crtShader = true;

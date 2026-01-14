@@ -114,6 +114,8 @@ CY_Sprite_PlayerBattler.actorPrefix = {
     "Q-Bee": "QB",
     "Makoto=Nanaya": "Makoto",
     "Shantae": "STE",
+    "Chaos Croc": "FCroc",
+    "Tails-Ko": "Tails"
 };
 
 CY_Sprite_PlayerBattler.prototype.loadBitmap = function () {
@@ -125,7 +127,7 @@ CY_Sprite_PlayerBattler.prototype.updateBitmap = function () {
     if (!battler) return;
 
     const prefix = CY_Sprite_PlayerBattler.actorPrefix[battler.name()] || battler.name();
-    const suffix = battler.getCorruptState ? (battler.getCorruptState() || "") : "";
+    const suffix = battler.getCorruptState ? (battler.getCorruptState() || "1") : "1";
     const name = prefix + suffix;
     const hue = battler.battlerHue ? battler.battlerHue() : 0;
 

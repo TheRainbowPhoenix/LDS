@@ -64,6 +64,10 @@ CY_Spriteset_Battle.prototype.createActors = function () {
 };
 
 CY_Spriteset_Battle.prototype.createEnemies = function () {
+    // Ensure enemies are positioned correctly before creating sprites
+    if (CY_Game_Enemy && CY_Game_Enemy.setupTroopFormatted) {
+        CY_Game_Enemy.setupTroopFormatted();
+    }
     const enemies = $gameTroop.members();
     const sprites = [];
     for (const enemy of enemies) {

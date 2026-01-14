@@ -122,16 +122,9 @@ Game_Enemy.prototype.makeActions = function () {
     }
 };
 
-// Hook into Game_Troop to position enemies for CY_Scene_Battle
-// This is tricky because setup happens before scene start usually.
-// But we can check if we likely want this layout? 
-// Or better: In CY_Scene_Battle, we can force a repositioning of enemies?
-// Alternatively: Override setup and check a flag? 
-// Since we don't know the scene during setup (setup happens when encounter starts), 
-// we might check purely based on the plugin being active? 
-// Valid approach: CY_Scene_Battle.prototype.start/create calls a helper to reposition enemies.
-// But CorruptBattleLine.js modifies Game_Troop directly.
-// Let's implement static helper for positioning that CY_Scene_Battle calls.
+// ----------------------------------------------------------------------------
+// Positioning Helpers and Overrides
+// ----------------------------------------------------------------------------
 
 CY_Game_Enemy.setupTroopFormatted = function () {
     // Layout constants
@@ -141,31 +134,12 @@ CY_Game_Enemy.setupTroopFormatted = function () {
     const hSpacing = 180;
     const vSpacing = 120;
 
-    const members = $gameTroop.members(); // These are Game_Enemy instances
-    // We need to re-assign their X/Y.
-    // However, Game_Troop setup creates them from $dataTroops.
-    // If we just move them here, it works.
+    const enemies = $gameTroop.members();
+    console.log("CY_Game_Enemy.setupTroopFormatted: Re-positioning " + enemies.length + " enemies");
 
-    // Warning: members order in $gameTroop._enemies matches allocation order.
-    // We should iterate them and re-assign screenX/Y?
-    // Game_Enemy coordinates are _screenX, _screenY usually set in ctor.
-    // makeUniqueNames() is also called.
-
-    // Re-run the logic from CorruptBattleLine for positioning
-    // Note: The logic in CorruptBattleLine used `i` variable that skips hidden/ID=5 enemies.
-
-    // We can't easily re-run the loop on existing members without knowing which member maps to which index logic.
-    // But since we are in a fresh scene, we can iterate $gameTroop._enemies and reposition them.
-
-    // Let's rely on the fact that we can iterate them.
     let i = 0;
-    const enemies = $gameTroop._enemies;
     for (let k = 0; k < enemies.length; k++) {
         const enemy = enemies[k];
-        // If enemy was hidden or is specific ID?
-        // Corrupt logic: if (m.enemyId != 5) ... i++
-        // We can check enemy.enemyId()
-
         if (enemy.enemyId() !== 5) {
             const col = i % cols;
             const row = Math.floor(i / cols);
@@ -174,7 +148,68 @@ CY_Game_Enemy.setupTroopFormatted = function () {
 
             enemy._screenX = x;
             enemy._screenY = y;
+            console.log(" -> Enemy " + k + " moved to (" + x + "," + y + ")");
             i++;
         }
     }
+};
+
+// Override Game_Troop.setup to enforce this logic from the start
+// This ensures that when BattleManager/DataManager sets up the troop,
+// we use our grid layout instead of the default or rpg_basic.js layout.
+const _Game_Troop_setup = Game_Troop.prototype.setup;
+Game_Troop.prototype.setup = function (troopId) {
+    // If not SideView, fall back to default behavior (which might be rpg_basic's implementation)
+    // However, since we want to force our layout for this mode, we just check system setting.
+    if ($gameSystem.isSideView()) {
+        this.clear();
+        this._troopId = troopId;
+        this._enemies = [];
+
+        // Layout constants
+        const cols = 3;
+        const startX = Graphics.boxWidth - 80;
+        const startY = Graphics.boxHeight * 0.55;
+        const hSpacing = 180;
+        const vSpacing = 120;
+
+        const members = this.troop().members;
+        let i = 0;
+
+        for (let k = 0; k < members.length; k++) {
+            const m = members[k];
+            if (!$dataEnemies[m.enemyId]) continue;
+
+            let x = 0;
+            let y = 0;
+
+            if (m.enemyId !== 5) {
+                const col = i % cols;
+                const row = Math.floor(i / cols);
+                x = startX - (cols - col - 1) * hSpacing - ((i >= 3 && i < 6) ? hSpacing * 0.5 : 0);
+                y = startY + row * vSpacing;
+                i++;
+            }
+
+            const enemy = new Game_Enemy(m.enemyId, x, y);
+            if (m.hidden) {
+                enemy.hide();
+            }
+            this._enemies.push(enemy);
+        }
+        this.makeUniqueNames();
+    } else {
+        _Game_Troop_setup.call(this, troopId);
+    }
+};
+
+// ----------------------------------------------------------------------------
+// Fix for rpg_basic.js interference
+// ----------------------------------------------------------------------------
+
+// rpg_basic.js adds setEnemyHome to Sprite_Enemy and calls it during updates, 
+// which forces enemies to the left side of the screen. We override it to do nothing,
+// preserving the positions set by our setupTroopFormatted logic.
+Sprite_Enemy.prototype.setEnemyHome = function (index) {
+    // Intentionally left empty
 };

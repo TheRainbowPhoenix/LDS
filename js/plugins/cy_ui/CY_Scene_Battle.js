@@ -18,8 +18,6 @@ CY_Scene_Battle.prototype.create = function () {
 };
 
 CY_Scene_Battle.prototype.start = function () {
-    // Reposition enemies before starting
-    CY_Game_Enemy.setupTroopFormatted();
     Scene_Battle.prototype.start.call(this);
 };
 

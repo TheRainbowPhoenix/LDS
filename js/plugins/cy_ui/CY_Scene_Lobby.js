@@ -44,17 +44,17 @@
         var w = Graphics.width;
         var h = Graphics.height;
         this._uiScale = 1.0;
-        if (this._width < 1200) {
+        if (w < 1200) {
             var baseW = 1200;
             var baseH = 800;
-            var sW = this._width / baseW;
-            var sH = this._height / baseH;
+            var sW = w / baseW;
+            var sH = h / baseH;
             this._uiScale = Math.min(sW, sH);
-        } else if (this._width > 2000) {
+        } else if (w > 2000) {
             var baseW = 2000;
             var baseH = 1000;
-            var sW = this._width / baseW;
-            var sH = this._height / baseH;
+            var sW = w / baseW;
+            var sH = h / baseH;
             this._uiScale = Math.min(sW, sH);
         }
     };
@@ -143,8 +143,8 @@
     };
 
     CY_Scene_Lobby.prototype.createCommandWindow = function () {
-        // Create the interactive command window
-        this._commandWindow = new CY_Window_LobbyCommand();
+        // Create the interactive command window with scale
+        this._commandWindow = new CY_Window_LobbyCommand(this._uiScale);
         this._commandWindow.setHandler('attack', this.onCommandAttack.bind(this));
         this._commandWindow.setHandler('valkyrja', this.onCommandValkyrja.bind(this));
         this._commandWindow.setHandler('equipment', this.onCommandEquipment.bind(this));
@@ -154,23 +154,15 @@
         this.addWindow(this._commandWindow);
 
         // Debug Safe Box for Command Window
-        // We will create a sprite/graphic that overlays the command window area
-        // to check for overlaps.
         if (this._cmdDebugBox) {
             this.removeChild(this._cmdDebugBox);
         }
         this._cmdDebugBox = new PIXI.Graphics();
-        // Since window position is set in initialize/move, we need to grab it later or update it.
-        // We'll update it in resize or right after creation.
-        // Let's just create it here and update position in update/resize loop if needed.
-        // For now, static check:
-        // Command Window dimensions: w=600, h=500, x=Right-600-20, y=Center
-        // We can draw it based on logic.
 
         var w = this._commandWindow.width;
         var h = this._commandWindow.height;
-        var x = Graphics.width - w - 20;
-        var y = (Graphics.height - h) / 2;
+        var x = this._commandWindow.x;
+        var y = this._commandWindow.y;
 
         this._cmdDebugBox.lineStyle(2, 0x00FFFF, 0.8); // Cyan Box
         this._cmdDebugBox.beginFill(0x00FFFF, 0.1);
@@ -232,21 +224,22 @@
 
         // Display the 3 party members on the left
         this._partyContainer = new PIXI.Container();
-        if (this._uiScale) {
-            this._partyContainer.scale.set(this._uiScale);
-        }
         this.addChild(this._partyContainer);
 
         var members = $gameParty.members();
+        var scale = this._uiScale || 1.0;
 
         // Define a "Box" area for characters on the left side
-        // Shifted Right to take more space
-        var boxX = 400;
-        var effectiveH = Graphics.height / (this._uiScale || 1.0);
-        var boxY = effectiveH + 20;
+        // Base positions at 1.0 scale
+        var baseBoxX = 400;
+        var baseBoxY = Graphics.height;
 
-        // Increased Spacing: Spread them out more (-200/200 instead of -150/150)
-        var positions = [
+        // Apply scale to positioning
+        var boxX = baseBoxX * scale;
+        var boxY = baseBoxY;
+
+        // Base spacing at 1.0 scale
+        var basePositions = [
             { x: 0, y: 0, scale: 1.0, z: 2 }, // Center
             { x: -220, y: -20, scale: 0.85, z: 1 }, // Left
             { x: 220, y: -20, scale: 0.85, z: 1 }  // Right
@@ -266,23 +259,24 @@
                 sprite.bitmap = ImageManager.loadPicture(imgName);
                 sprite.anchor.set(0.5, 1.0);
 
-                var pos = positions[index] || { x: 0, y: 0, scale: 1, z: 0 };
+                var pos = basePositions[index] || { x: 0, y: 0, scale: 1, z: 0 };
 
-                sprite.x = boxX + pos.x;
-                sprite.y = boxY + pos.y;
-                sprite.scale.set(pos.scale);
+                // Apply UI scale to positions and character scale
+                sprite.x = boxX + (pos.x * scale);
+                sprite.y = boxY + (pos.y * scale);
+                sprite.scale.set(pos.scale * scale);
                 sprite.zIndex = pos.z;
 
                 visuals.push(sprite);
             } else {
                 // Draw MISSING box if no img
-                var pos = positions[index] || { x: 0, y: 0, scale: 1, z: 0 };
+                var pos = basePositions[index] || { x: 0, y: 0, scale: 1, z: 0 };
                 var debugG = new PIXI.Graphics();
                 debugG.lineStyle(4, 0xFF0000, 1);
                 debugG.drawRect(-50, -200, 100, 200);
-                debugG.x = boxX + pos.x;
-                debugG.y = boxY + pos.y;
-                debugG.scale.set(pos.scale);
+                debugG.x = boxX + (pos.x * scale);
+                debugG.y = boxY + (pos.y * scale);
+                debugG.scale.set(pos.scale * scale);
                 debugG.zIndex = 100;
 
                 var txt = new PIXI.Text(actor.name() + "\nNO IMG", { fill: 'red', stroke: 'black', strokeThickness: 2 });
@@ -322,17 +316,25 @@
     CY_Window_LobbyCommand.prototype = Object.create(CY_Window_Selectable.prototype);
     CY_Window_LobbyCommand.prototype.constructor = CY_Window_LobbyCommand;
 
-    CY_Window_LobbyCommand.prototype.initialize = function () {
-        var w = 400;
-        var h = 500;
+    CY_Window_LobbyCommand.prototype.initialize = function (uiScale) {
+        this._uiScale = uiScale || 1.0;
+        
+        // Base dimensions at 1.0 scale
+        var baseW = 400;
+        var baseH = 500;
+        
+        // Apply scale
+        var w = baseW * this._uiScale;
+        var h = baseH * this._uiScale;
+        
         // Right adjusted with 20px padding
         var x = Graphics.width - w - 20;
         // Vertically centered
         var y = (Graphics.height - h) / 2;
 
-        // Adjusted size for Pointy-Topped Hex
-        this.hexWidth = 160;
-        this.hexHeight = 140;
+        // Adjusted size for Pointy-Topped Hex (scaled)
+        this.hexWidth = 160 * this._uiScale;
+        this.hexHeight = 140 * this._uiScale;
 
         this._list = [];
         this.clearCommandList();
@@ -382,9 +384,9 @@
         var cx = this.width / 2 - this.standardPadding();
         var cy = this.height / 2 - this.standardPadding();
 
-        // Closer packing for larger hexes
-        var yOffset = 115;
-        var xOffset = 85;
+        // Base offsets scaled
+        var yOffset = 115 * this._uiScale;
+        var xOffset = 85 * this._uiScale;
 
         var x, y;
 
@@ -478,15 +480,15 @@
 
         var bY = cy + ry; // Bottom Y tip
 
-        // Slightly flatter triangle
-        var triH = 10;
-        var triW = 32;
+        // Slightly flatter triangle (scaled)
+        var triH = 10 * this._uiScale;
+        var triW = 32 * this._uiScale;
 
         ctx.save();
         ctx.beginPath();
-        ctx.moveTo(cx, bY - 4); // Bottom Tip (slightly inset from hex border)
-        ctx.lineTo(cx + triW / 2, bY - 4 - triH);
-        ctx.lineTo(cx - triW / 2, bY - 4 - triH);
+        ctx.moveTo(cx, bY - 4 * this._uiScale); // Bottom Tip (slightly inset from hex border)
+        ctx.lineTo(cx + triW / 2, bY - 4 * this._uiScale - triH);
+        ctx.lineTo(cx - triW / 2, bY - 4 * this._uiScale - triH);
         ctx.closePath();
 
         ctx.fillStyle = Colors.warning;
@@ -500,17 +502,17 @@
 
         // 5. Text
         this.contents.fontFace = 'GameFont';
-        this.contents.fontSize = 28;
+        this.contents.fontSize = 28 * this._uiScale;
         this.contents.outlineColor = 'rgba(0,0,0,0.8)';
-        this.contents.outlineWidth = 5;
+        this.contents.outlineWidth = 5 * this._uiScale;
         this.changeTextColor(Colors.white);
-        this.drawText(label, x, y + (h - 28) / 2 - 10, w, 'center');
+        this.drawText(label, x, y + (h - 28 * this._uiScale) / 2 - 10 * this._uiScale, w, 'center');
 
         // Subtext
-        this.contents.fontSize = 14;
+        this.contents.fontSize = 14 * this._uiScale;
         this.changeTextColor(Colors.cyan);
         var subText = (index === 0) ? "ACTION" : (index === 1) ? "UNIT" : (index === 2) ? "GEAR" : "SHOP";
-        this.drawText(subText, x, y + (h - 28) / 2 + 20, w, 'center');
+        this.drawText(subText, x, y + (h - 28 * this._uiScale) / 2 + 20 * this._uiScale, w, 'center');
     };
 
     // Update Highlight Position
@@ -522,7 +524,7 @@
 
         if (shouldShow) {
             var rect = this.itemRect(this.index());
-            var expansion = 10;
+            var expansion = 10 * this._uiScale;
             var targetX = rect.x - expansion;
             var targetY = rect.y - expansion;
 
@@ -550,7 +552,7 @@
     // Refresh Highlight (Pointy-Topped Hexagon)
     CY_Window_LobbyCommand.prototype.refreshHighlight = function (baseW, baseH) {
         var Colors = (typeof CY_Main !== 'undefined' && CY_Main.Colors) ? CY_Main.Colors : { cyan: '#5CF5FA' };
-        var expansion = this._expansion || 10;
+        var expansion = this._expansion || (10 * this._uiScale);
         var w = baseW + (expansion * 1);
         var h = baseH + (expansion * 1);
 
@@ -583,7 +585,7 @@
         ctx.fill();
 
         ctx.strokeStyle = Colors.cyan;
-        ctx.lineWidth = 4; // Outer glow border
+        ctx.lineWidth = 4 * this._uiScale; // Outer glow border (scaled)
         ctx.stroke();
 
         ctx.restore();

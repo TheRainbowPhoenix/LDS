@@ -88,6 +88,25 @@ CY_Spriteset_Battle.prototype.createEnemies = function () {
             sprite.setHome(enemy.screenX(), enemy.screenY());
         }
 
+        // Add HP/Info Gauge (Same style as Party)
+        const hp = new CY_Sprite_InfoBar();
+        hp.anchor.set(0.5, 1);
+        hp.setup(enemy);
+
+        // Counter-scale the HP bar so it stays readable if the enemy is very small
+        // This ensures the bar is effectively 1.0 scale relative to the screen
+        const invScale = 1.0 / scale;
+        hp.scale.set(invScale, invScale);
+
+        // Position relative to enemy sprite.
+        // Note: Enemy sprites vary in height. We can try a fixed offset or dynamic.
+        // For now, mirroring the actor offset but checking if we can do better.
+        // Since bitmap might not be loaded, fixed is safer for immediate setup. 
+        hp.y = -startY - sprite.height * sprite.scale.y; // Default somewhat lower than actors who might be tall
+        hp.x = 0;
+
+        sprite.addChild(hp);
+
         sprites.push(sprite);
     }
 
@@ -106,28 +125,64 @@ CY_Spriteset_Battle.prototype.refreshLayout = function (scale) {
     this.recreateForResize(scale);
 };
 
+// Force Battleback to Factory
+CY_Spriteset_Battle.prototype.battleback1Name = function () {
+    return 'Factory';
+};
+
+CY_Spriteset_Battle.prototype.battleback2Name = function () {
+    return ''; // Usually Factory is just one image or they act together. Assuming Factory implies Factory for back1.
+    // If back2 is needed, the user might have meant both. Let's try just back1 for now or check if back2 exists?
+    // Safest is maybe set back1 to Factory and back2 to empty or Factory depending on file structure.
+    // Given "Force battleback to Factory", I'll set back1='Factory'.
+};
+
+CY_Spriteset_Battle.prototype.createBattleField = function () {
+    // Override to use full Graphics width/height so it resizes/fills properly
+    var width = Graphics.width;
+    var height = Graphics.height;
+    var x = 0;
+    var y = 0;
+    this._battleField = new Sprite();
+    this._battleField.setFrame(x, y, width, height);
+    this._battleField.x = x;
+    this._battleField.y = y;
+    this._baseSprite.addChild(this._battleField);
+};
+
 CY_Spriteset_Battle.prototype.recreateForResize = function (scale) {
     if (!scale) scale = 1.0;
 
-    console.log("recreateForResize")
+    console.log("recreateForResize: Full Refresh");
 
-    // 1. Remove Old Actor Sprites
-    if (this._actorSprites) {
-        for (const sprite of this._actorSprites) {
-            this._battleField.removeChild(sprite);
-        }
+    this.setFrame(0, 0, Graphics.width, Graphics.height);
+    this._tone = [0, 0, 0, 0];
+    this.opaque = true;
+    this.createLowerLayer();
+    this.createToneChanger();
+    this.createUpperLayer();
+
+
+    // 4. Recreate Enemies (First, for depth)
+    this.createEnemies();
+
+    // 5. Recreate Actors
+    this.createActors();
+
+    this.update();
+
+
+    // 1. Destroy old BattleField and all its children (Battlebacks, Enemies, Actors)
+    if (this._battleField) {
+        this._baseSprite.removeChild(this._battleField);
+        // We don't strictly need to destroy children as they will be GC'd, 
+        // but clearing references is good.
+        this._battleField = null;
+        this._back1Sprite = null;
+        this._back2Sprite = null;
         this._actorSprites = [];
-    }
-
-    // 2. Remove Old Enemy Sprites
-    if (this._enemySprites) {
-        for (const sprite of this._enemySprites) {
-            this._battleField.removeChild(sprite);
-        }
         this._enemySprites = [];
     }
 
-    // 3. Re-Create with new Scale
-    this.createActors();
-    this.createEnemies();
+
 };

@@ -36,88 +36,167 @@ CY_Scene_Battle.prototype.resize = function () {
     Scene_Battle.prototype.resize.call(this);
     this.updateUIScale();
 
-    // Recreate Spriteset content (Full recreate as requested)
-    if (this._spriteset) {
-        this._spriteset.recreateForResize(this._uiScale);
-        this._spriteset.width = Graphics.width;
-        this._spriteset.height = Graphics.height;
-    }
+    // "Nuclear" Resize: Recreate visible layer entirely
+    console.log("CY_Scene_Battle: Nuclear Resize Triggered");
 
-    // Recreate all windows to handle resizing properly ("keeping the data states")
-    this.recreateAllWindows();
-};
-
-CY_Scene_Battle.prototype.recreateAllWindows = function () {
     // 1. Capture State
-    const state = {
-        actorCmd: {
-            active: this._actorCommandWindow && this._actorCommandWindow.active,
-            index: this._actorCommandWindow ? this._actorCommandWindow.index() : -1,
-            visible: this._actorCommandWindow && this._actorCommandWindow.visible
-        },
-        enemyWnd: {
-            active: this._enemyWindow && this._enemyWindow.active,
-            index: this._enemyWindow ? this._enemyWindow.index() : -1,
-            visible: this._enemyWindow && this._enemyWindow.visible
-        },
-        partyCmd: {
-            active: this._partyCommandWindow && this._partyCommandWindow.active,
-            visible: this._partyCommandWindow && this._partyCommandWindow.visible
-        },
-        // We can capture more if needed (skill window, item window, etc)
-        // For battle test basic flow, these are most critical.
-    };
+    const state = this.captureBattleState();
 
-    // 2. Destroy Old Windows
-    if (this._windowLayer) {
-        this._windowLayer.removeChildren();
+    // 2. Destroy Everything
+    if (this._spriteset) {
+        this.removeChild(this._spriteset);
+        this._spriteset = null;
     }
-    // Also buttons are usually added to scene or window layer? 
-    // In createButtons -> addWindow -> adds to _windowLayer.
-    // So removing children of _windowLayer should clear them.
-    // Re-null references to be safe
+    if (this._windowLayer) {
+        this.removeChild(this._windowLayer);
+        this._windowLayer = null;
+    }
+
+    // Clear Window References
     this._actorCommandWindow = null;
-    this._enemyWindow = null;
-    this._statusWindow = null;
     this._partyCommandWindow = null;
+    this._enemyWindow = null;
     this._skillWindow = null;
     this._itemWindow = null;
     this._actorWindow = null;
     this._helpWindow = null;
     this._messageWindow = null;
+    this._statusWindow = null;
+    this._logWindow = null;
     this._scrollTextWindow = null;
     this._cancelButton = null;
     this._menuButton = null;
 
-    // 3. Create All Windows Again
-    this.createAllWindows();
+    // 3. Rebuild Everything
+    // This calls createSpriteset, createWindowLayer, createAllWindows
+    this.createDisplayObjects();
 
-    // 4. Restore State & Relink
-    if (state.actorCmd.active) {
-        this._actorCommandWindow.activate();
-        this._actorCommandWindow.select(state.actorCmd.index);
-    } else {
-        this._actorCommandWindow.deactivate();
+    // 4. Restore State
+    this.restoreBattleState(state);
+};
+
+CY_Scene_Battle.prototype.captureBattleState = function () {
+    const state = {
+        partyCmd: {
+            active: this._partyCommandWindow && this._partyCommandWindow.active,
+            visible: this._partyCommandWindow && this._partyCommandWindow.visible,
+            index: this._partyCommandWindow ? this._partyCommandWindow.index() : 0
+        },
+        actorCmd: {
+            active: this._actorCommandWindow && this._actorCommandWindow.active,
+            visible: this._actorCommandWindow && this._actorCommandWindow.visible,
+            index: this._actorCommandWindow ? this._actorCommandWindow.index() : 0,
+            actor: BattleManager.actor() // Capture current actor context
+        },
+        enemyWnd: {
+            active: this._enemyWindow && this._enemyWindow.active,
+            visible: this._enemyWindow && this._enemyWindow.visible,
+            index: this._enemyWindow ? this._enemyWindow.index() : 0
+        },
+        skillWnd: {
+            active: this._skillWindow && this._skillWindow.active,
+            visible: this._skillWindow && this._skillWindow.visible,
+            index: this._skillWindow ? this._skillWindow.index() : 0
+        },
+        itemWnd: {
+            active: this._itemWindow && this._itemWindow.active,
+            visible: this._itemWindow && this._itemWindow.visible,
+            index: this._itemWindow ? this._itemWindow.index() : 0
+        },
+        actorWnd: {
+            active: this._actorWindow && this._actorWindow.active,
+            visible: this._actorWindow && this._actorWindow.visible,
+            index: this._actorWindow ? this._actorWindow.index() : 0
+        },
+        // Additional Windows requested
+        statusWnd: {
+            visible: this._statusWindow && this._statusWindow.visible
+        },
+        logWnd: {
+            visible: this._logWindow && this._logWindow.visible
+        },
+        helpWnd: {
+            visible: this._helpWindow && this._helpWindow.visible,
+            text: this._helpWindow ? this._helpWindow._text : ""
+        }
+    };
+    return state;
+};
+
+CY_Scene_Battle.prototype.restoreBattleState = function (state) {
+    // Helper to Restore Selection
+    const restore = (w, s) => {
+        if (!w || !s) return;
+        if (s.visible) w.show(); else w.hide();
+        if (s.active) {
+            w.activate();
+            w.select(s.index);
+        } else {
+            w.deactivate();
+        }
+    };
+
+    // 0. Log, Status, Help
+    if (this._logWindow) {
+        if (state.logWnd.visible) this._logWindow.show(); else this._logWindow.hide();
+        // Log window might need specific methods to restore lines but that's complex. 
+        // Usually it clears on creation. We might accept it being empty.
     }
-    this._actorCommandWindow.visible = state.actorCmd.visible;
 
-    if (state.enemyWnd.active) {
-        this._enemyWindow.activate();
-        this._enemyWindow.select(state.enemyWnd.index);
-    } else {
-        this._enemyWindow.deactivate();
+    if (this._statusWindow) {
+        if (state.statusWnd.visible) this._statusWindow.show(); else this._statusWindow.hide();
+        this._statusWindow.refresh();
     }
-    this._enemyWindow.visible = state.enemyWnd.visible;
 
+    if (this._helpWindow) {
+        if (state.helpWnd.visible) this._helpWindow.show(); else this._helpWindow.hide();
+        if (state.helpWnd.text) this._helpWindow.setText(state.helpWnd.text);
+    }
+
+    // 1. Party Command
+    // Explicitly setup if it was active? Window_PartyCommand doesn't have setup, just start/open.
+    restore(this._partyCommandWindow, state.partyCmd);
     if (state.partyCmd.active) {
-        this._partyCommandWindow.activate();
-    } else {
-        this._partyCommandWindow.deactivate();
+        // Just calling activate/select might be enough, but ensure it's open
+        this._partyCommandWindow.open();
     }
-    this._partyCommandWindow.visible = state.partyCmd.visible;
 
-    // Refresh status
-    if (this._statusWindow) this._statusWindow.refresh();
+    // 2. Actor Command
+    // If we have an actor, we MUST setup the window so it knows who it's for.
+    if (state.actorCmd.actor) {
+        this._actorCommandWindow.setup(state.actorCmd.actor);
+    }
+    restore(this._actorCommandWindow, state.actorCmd);
+
+
+    // 3. Enemy Window
+    restore(this._enemyWindow, state.enemyWnd);
+
+    // 4. Sub-Windows (Skill, Item, Actor)
+    // Restore context for Skill Window
+    if (state.skillWnd.active || state.skillWnd.visible) {
+        if (state.actorCmd.actor) {
+            this._skillWindow.setActor(state.actorCmd.actor);
+            // We assume stypeId was set. Attempt to retrieve from actor or last command?
+            // If actor command window is active/setup, currentExt() might suffice only if we selected 'Skill'.
+            // If we are IN skill window, actor command is hidden/inactive but its index might still point to 'Skill'.
+            if (this._actorCommandWindow) {
+                this._skillWindow.setStypeId(this._actorCommandWindow.currentExt());
+            }
+            this._skillWindow.refresh();
+        }
+        restore(this._skillWindow, state.skillWnd);
+    }
+
+    if (state.itemWnd.active || state.itemWnd.visible) {
+        this._itemWindow.refresh();
+        restore(this._itemWindow, state.itemWnd);
+    }
+
+    if (state.actorWnd.active || state.actorWnd.visible) {
+        this._actorWindow.refresh();
+        restore(this._actorWindow, state.actorWnd);
+    }
 };
 
 CY_Scene_Battle.prototype.create = function () {
@@ -240,8 +319,12 @@ CY_Window_BattleStatus.prototype.drawBackgroundRect = function () { };
 CY_Window_BattleStatus.prototype.drawItem = function () { };
 
 CY_Scene_Battle.prototype.createEnemyWindow = function () {
-    this._enemyWindow = new CY_Window_BattleEnemy(0, this._statusWindow.y);
-    this._enemyWindow.x = Graphics.boxWidth - this._enemyWindow.width;
+    this._enemyWindow = new CY_Window_BattleEnemy(0, 0); // Position at Top (y=0)
+    // Center it or Full Width? 
+    // Default Window_BattleEnemy uses Graphics.boxWidth - 192.
+    // Let's center it at the top.
+    this._enemyWindow.x = (Graphics.boxWidth - this._enemyWindow.width) / 2;
+
     this._enemyWindow.setHandler('ok', this.onEnemyOk.bind(this));
     this._enemyWindow.setHandler('cancel', this.onEnemyCancel.bind(this));
     this.addWindow(this._enemyWindow);
@@ -258,13 +341,30 @@ CY_Window_BattleEnemy.prototype.constructor = CY_Window_BattleEnemy;
 
 CY_Window_BattleEnemy.prototype.initialize = function (x, y) {
     Window_BattleEnemy.prototype.initialize.call(this, x, y);
+    // Explicitly set frame/refresh if needed, but standard init handles it.
+};
+
+CY_Window_BattleEnemy.prototype.windowWidth = function () {
+    // Make it wider if it's at the top?
+    return Graphics.boxWidth;
 };
 
 CY_Window_BattleEnemy.prototype.maxCols = function () {
-    return 3;
+    return 3; // Keep 3 columns
 };
 
-CY_Window_BattleEnemy.prototype.drawBackgroundRect = function (rect) { };
+CY_Window_BattleEnemy.prototype.numVisibleRows = function () {
+    return 1; // Reduce height to 1 row
+};
+
+CY_Window_BattleEnemy.prototype.drawBackgroundRect = function (rect) {
+    // Keep transparent or default?
+    // User requested "size too large", maybe wants minimal look.
+    // We previously had empty drawBackgroundRect, let's keep it empty for transparency
+    // or call super if they want a window.
+    // If "too large height", maybe simply reducing rows is enough.
+    // Leaving it empty (transparent) as per previous snippet.
+};
 CY_Window_BattleEnemy.prototype._refreshBack = function () { };
 CY_Window_BattleEnemy.prototype._refreshFrame = function () { };
 CY_Window_BattleEnemy.prototype.createCancelButton = function () { };

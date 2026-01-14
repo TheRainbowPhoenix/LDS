@@ -52,20 +52,42 @@ CY_Spriteset_Battle.prototype.createActors = function () {
 };
 
 CY_Spriteset_Battle.prototype.createEnemies = function () {
-    // Ensure enemies are positioned correctly before creating sprites
-    if (CY_Game_Enemy && CY_Game_Enemy.setupTroopFormatted) {
-        CY_Game_Enemy.setupTroopFormatted();
-    }
-
     const scale = SceneManager._scene._uiScale || 1.0;
-
     const enemies = $gameTroop.members();
     const sprites = [];
+
+    // Layout Constants match CY_Game_Enemy.setupTroopFormatted
+    const cols = 3;
+    const startX = Graphics.boxWidth - (80 * scale);
+    const startY = Graphics.boxHeight * 0.55;
+    const hSpacing = 180 * scale;
+    const vSpacing = 120 * scale;
+
+    let i = 0;
     for (const enemy of enemies) {
         const sprite = new Sprite_Enemy(enemy);
-        // Apply scale
         sprite.scale.set(scale, scale);
-        // Position is set by setBattler -> setHome -> enemy.screenX/Y
+
+        // Position Logic
+        if (enemy.enemyId() !== 5) {
+            const col = i % cols;
+            const row = Math.floor(i / cols);
+            // Calculate X from Right edge
+            const x = startX - (cols - col - 1) * hSpacing - ((i >= 3 && i < 6) ? hSpacing * 0.5 : 0);
+            const y = startY + row * vSpacing;
+
+            // Set sprite home
+            sprite.setHome(x, y);
+            // Update enemy object for consistency
+            enemy._screenX = x;
+            enemy._screenY = y;
+
+            i++;
+        } else {
+            // Preserve existing position for special enemy
+            sprite.setHome(enemy.screenX(), enemy.screenY());
+        }
+
         sprites.push(sprite);
     }
 

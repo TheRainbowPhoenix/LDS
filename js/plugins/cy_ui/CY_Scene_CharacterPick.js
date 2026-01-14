@@ -157,7 +157,7 @@ CY_Scene_CharacterPick.prototype.initialize = function () {
 CY_Scene_CharacterPick.prototype.getCharacterData = function () {
     return [
         {
-            name: "Chaos Cros", id: 1, image: "FCroc Right", classes: "Program / Robotic / Tank",
+            name: "Chaos Croc", id: 1, image: "FCroc Right", classes: "Program / Robotic / Tank",
             stats: { HP: 600, EN: 150, ATK: 5, DEF: 3, HEAL: 2, SDEF: 4, ENA: 3, LUCK: 3 }
         },
         // {

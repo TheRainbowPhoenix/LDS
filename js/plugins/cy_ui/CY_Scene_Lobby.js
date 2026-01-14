@@ -10,7 +10,7 @@
 
     function CY_Scene_Lobby() {
         this.initialize.apply(this, arguments);
-    }
+    };
 
     window.CY_Scene_Lobby = CY_Scene_Lobby;
 
@@ -152,6 +152,31 @@
         this._commandWindow.setHandler('cancel', this.popScene.bind(this)); // Back to Title/Map
 
         this.addWindow(this._commandWindow);
+
+        // Debug Safe Box for Command Window
+        // We will create a sprite/graphic that overlays the command window area
+        // to check for overlaps.
+        if (this._cmdDebugBox) {
+            this.removeChild(this._cmdDebugBox);
+        }
+        this._cmdDebugBox = new PIXI.Graphics();
+        // Since window position is set in initialize/move, we need to grab it later or update it.
+        // We'll update it in resize or right after creation.
+        // Let's just create it here and update position in update/resize loop if needed.
+        // For now, static check:
+        // Command Window dimensions: w=600, h=500, x=Right-600-20, y=Center
+        // We can draw it based on logic.
+
+        var w = this._commandWindow.width;
+        var h = this._commandWindow.height;
+        var x = Graphics.width - w - 20;
+        var y = (Graphics.height - h) / 2;
+
+        this._cmdDebugBox.lineStyle(2, 0x00FFFF, 0.8); // Cyan Box
+        this._cmdDebugBox.beginFill(0x00FFFF, 0.1);
+        this._cmdDebugBox.drawRect(x, y, w, h);
+        this._cmdDebugBox.endFill();
+        this.addChild(this._cmdDebugBox);
     };
 
     // Command Handlers (Placeholders for now)
@@ -215,25 +240,16 @@
         var members = $gameParty.members();
 
         // Define a "Box" area for characters on the left side
-        // Unscaled coordinates used inside container, container is scaled.
-        var boxX = 300;
-        var boxY = (Graphics.height / (this._uiScale || 1)) + 20; // Try to anchor bottom relative to unscaled height?
-        // Actually, if we scale the container, 'Graphics.height' inside the container is larger if we scale down.
-        // Let's stick to safe logic:
-
-        // If container is scaled 0.8:
-        // Drawing at y=1000 ends up at screen y=800.
-        // We want it at screen bottom.
-        // So y inside container = Graphics.height / scale.
-
+        // Shifted Right to take more space
+        var boxX = 400;
         var effectiveH = Graphics.height / (this._uiScale || 1.0);
-        boxY = effectiveH + 20;
+        var boxY = effectiveH + 20;
 
-        // Relative offsets from boxX, boxY
+        // Increased Spacing: Spread them out more (-200/200 instead of -150/150)
         var positions = [
             { x: 0, y: 0, scale: 1.0, z: 2 }, // Center
-            { x: -150, y: -20, scale: 0.85, z: 1 }, // Left
-            { x: 150, y: -20, scale: 0.85, z: 1 }  // Right
+            { x: -220, y: -20, scale: 0.85, z: 1 }, // Left
+            { x: 220, y: -20, scale: 0.85, z: 1 }  // Right
         ];
 
         // Sort members to draw back-most first (Painter's Algorithm)
@@ -258,6 +274,23 @@
                 sprite.zIndex = pos.z;
 
                 visuals.push(sprite);
+            } else {
+                // Draw MISSING box if no img
+                var pos = positions[index] || { x: 0, y: 0, scale: 1, z: 0 };
+                var debugG = new PIXI.Graphics();
+                debugG.lineStyle(4, 0xFF0000, 1);
+                debugG.drawRect(-50, -200, 100, 200);
+                debugG.x = boxX + pos.x;
+                debugG.y = boxY + pos.y;
+                debugG.scale.set(pos.scale);
+                debugG.zIndex = 100;
+
+                var txt = new PIXI.Text(actor.name() + "\nNO IMG", { fill: 'red', stroke: 'black', strokeThickness: 2 });
+                txt.anchor.set(0.5, 1);
+                txt.y = -100;
+                debugG.addChild(txt);
+
+                this._partyContainer.addChild(debugG);
             }
         });
 
@@ -290,7 +323,7 @@
     CY_Window_LobbyCommand.prototype.constructor = CY_Window_LobbyCommand;
 
     CY_Window_LobbyCommand.prototype.initialize = function () {
-        var w = 600;
+        var w = 400;
         var h = 500;
         // Right adjusted with 20px padding
         var x = Graphics.width - w - 20;

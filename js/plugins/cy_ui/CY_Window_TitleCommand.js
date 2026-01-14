@@ -297,6 +297,7 @@ CY_Window_TitleCommand.prototype.makeCommandList = function () {
     this.addCommand('PHASER', 'phaser', true);
     this.addCommand('TEAM PICK', 'charPick', true);
     this.addCommand('SPINE', 'spine', true);
+    this.addCommand('LOBBY', 'lobby', true);
 };
 
 /**

@@ -157,58 +157,58 @@ CY_Scene_CharacterPick.prototype.initialize = function () {
 CY_Scene_CharacterPick.prototype.getCharacterData = function () {
     return [
         {
-            name: "Chaos Cros", image: "FCroc Right", classes: "Program / Robotic / Tank",
+            name: "Chaos Cros", id: 1, image: "FCroc Right", classes: "Program / Robotic / Tank",
             stats: { HP: 600, EN: 150, ATK: 5, DEF: 3, HEAL: 2, SDEF: 4, ENA: 3, LUCK: 3 }
         },
+        // {
+        //     name: "Spine Boy", image: "spineboy-pro", spine: "spineboy-pro", anim: "idle",
+        //     classes: "Mascot / Test / Hero",
+        //     stats: { HP: 400, EN: 120, ATK: 2, DEF: 1, HEAL: 4, SDEF: 2, ENA: 3, LUCK: 2 }
+        // },
+        // {
+        //     name: "Seele", image: "seele", spine: "seele", anim: "animation",
+        //     classes: "Alter / Dark / Evil",
+        //     stats: { HP: 600, EN: 250, ATK: 6, DEF: 4, HEAL: 2, SDEF: 4, ENA: 2, LUCK: 2 }
+        // },
+        // {
+        //     name: "kapara", image: "kapara", spine: "kapara", anim: "OP_iya",
+        //     classes: "Alter / Dark / Evil",
+        //     stats: { HP: 600, EN: 250, ATK: 6, DEF: 4, HEAL: 2, SDEF: 4, ENA: 2, LUCK: 2 }
+        // },
         {
-            name: "Spine Boy", image: "spineboy-pro", spine: "spineboy-pro", anim: "idle",
-            classes: "Mascot / Test / Hero",
-            stats: { HP: 400, EN: 120, ATK: 2, DEF: 1, HEAL: 4, SDEF: 2, ENA: 3, LUCK: 2 }
-        },
-        {
-            name: "Seele", image: "seele", spine: "seele", anim: "animation",
-            classes: "Alter / Dark / Evil",
-            stats: { HP: 600, EN: 250, ATK: 6, DEF: 4, HEAL: 2, SDEF: 4, ENA: 2, LUCK: 2 }
-        },
-        {
-            name: "kapara", image: "kapara", spine: "kapara", anim: "OP_iya",
-            classes: "Alter / Dark / Evil",
-            stats: { HP: 600, EN: 250, ATK: 6, DEF: 4, HEAL: 2, SDEF: 4, ENA: 2, LUCK: 2 }
-        },
-        {
-            name: "Tails-Ko", image: "Tails Right", classes: "Tools / Organic / Support",
+            name: "Tails-Ko", id: 2, image: "Tails Right", classes: "Tools / Organic / Support",
             stats: { HP: 500, EN: 50, ATK: 2, DEF: 2, HEAL: 4, SDEF: 5, ENA: 7, LUCK: 10 }
         },
         {
-            name: "Crisis", image: "Crisis Right", classes: "Program / Robotic / Burst",
+            name: "Crisis", id: 3, image: "Crisis Right", classes: "Program / Robotic / Burst",
             stats: { HP: 450, EN: 100, ATK: 6, DEF: 3, HEAL: 3, SDEF: 4, ENA: 5, LUCK: 6 }
         },
         {
-            name: "Q-Bee", image: "Bee Right", classes: "Magic / Organic / Burst",
+            name: "Q-Bee", id: 4, image: "Bee Right", classes: "Magic / Organic / Burst",
             stats: { HP: 500, EN: 100, ATK: 3, DEF: 3, HEAL: 3, SDEF: 2, ENA: 6, LUCK: 4 }
         },
         {
-            name: "Makato", image: "Makoto Right", classes: "Magic / Organic / Burst",
+            name: "Makato", id: 5, image: "Makoto Right", classes: "Magic / Organic / Burst",
             stats: { HP: 500, EN: 100, ATK: 5, DEF: 1, HEAL: 1, SDEF: 2, ENA: 4, LUCK: 2 }
         },
         {
-            name: "Shantae", image: "Shantae Right", classes: "Magic / Organic / Support",
+            name: "Shantae", id: 6, image: "Shantae Right", classes: "Magic / Organic / Support",
             stats: { HP: 550, EN: 150, ATK: 2, DEF: 2, HEAL: 6, SDEF: 5, ENA: 5, LUCK: 7 }
         },
         {
-            name: "Zetta Zepto", image: "Zetta Right", classes: "Tools / Organic / Support",
+            name: "Zetta Zepto", id: 7, image: "Zetta Right", classes: "Tools / Organic / Support",
             stats: { HP: 550, EN: 100, ATK: 2, DEF: 2, HEAL: 1, SDEF: 5, ENA: 8, LUCK: 8 }
         },
         {
-            name: "Roxi", image: "Roxi Right", classes: "Magic / Organic / Support",
+            name: "Roxi", id: 8, image: "Roxi Right", classes: "Magic / Organic / Support",
             stats: { HP: 650, EN: 50, ATK: 3, DEF: 3, HEAL: 3, SDEF: 1, ENA: 8, LUCK: 4 }
         },
         {
-            name: "R.D.", image: "Dash Right", classes: "Magic / Organic / Burst",
+            name: "R.D.", id: 9, image: "Dash Right", classes: "Magic / Organic / Burst",
             stats: { HP: 350, EN: 50, ATK: 3, DEF: 4, HEAL: 5, SDEF: 5, ENA: 7, LUCK: 2 }
         },
         {
-            name: "D.D.", image: "DD Right", classes: "Magic / Organic / Support",
+            name: "D.D.", id: 10, image: "DD Right", classes: "Magic / Organic / Support",
             stats: { HP: 600, EN: 100, ATK: 2, DEF: 3, HEAL: 10, SDEF: 5, ENA: 7, LUCK: 7 }
         }
     ];
@@ -851,7 +851,18 @@ CY_Scene_CharacterPick.prototype.onSelect = function () {
     if (this._selectedRecruits.length >= 3) {
         // Done
         DataManager.setupNewGame();
-        SceneManager.goto(Scene_Map);
+
+        // Add selected actors to party
+        $gameParty._actors = []; // Clear default start party
+        for (var i = 0; i < this._selectedRecruits.length; i++) {
+            var char = this._selectedRecruits[i];
+            // If ID is defined in data use it, else default to i+1 or log error
+            var id = char.id || (i + 1);
+            $gameParty.addActor(id);
+        }
+
+        // SceneManager.goto(Scene_Map);
+        SceneManager.goto(CY_Scene_Dialog);
     } else {
         this.onNext();
     }

@@ -550,6 +550,7 @@ CY_Scene_Title.prototype.createCommandWindow = function () {
     this._commandWindow.setHandler('phaser', this.commandPhaser.bind(this));
     this._commandWindow.setHandler('charPick', this.commandCharPick.bind(this));
     this._commandWindow.setHandler('spine', this.commandSpine.bind(this));
+    this._commandWindow.setHandler('lobby', this.commandLobby.bind(this));
 
     this.addChild(this._commandWindow);
 };
@@ -642,6 +643,15 @@ CY_Scene_Title.prototype.commandSpine = function () {
     this._commandWindow.close();
     this.fadeOutAll();
     SceneManager.goto(Scene_SpineTest);
+};
+
+CY_Scene_Title.prototype.commandLobby = function () {
+    this._commandWindow.close();
+    // Setup dummy game data if needed since we are bypassing New Game
+    if (!$gameParty) {
+        DataManager.setupNewGame();
+    }
+    SceneManager.goto(CY_Scene_Lobby);
 };
 
 //-----------------------------------------------------------------------------

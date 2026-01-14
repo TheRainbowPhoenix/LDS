@@ -6,6 +6,7 @@
   "js/rpg_managers/audio_manager.js",
   "js/rpg_managers/sound_manager.js",
   "js/rpg_managers/text_manager.js",
+  "js/rpg_managers/color_manager.js",
   "js/rpg_managers/scene_manager.js",
   "js/rpg_managers/battle_manager.js",
   "js/rpg_managers/plugin_manager.js"

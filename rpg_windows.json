@@ -1,5 +1,6 @@
 [
   "js/rpg_windows/window_base.js",
+  "js/rpg_windows/window_scrollable.js",
   "js/rpg_windows/window_selectable.js",
   "js/rpg_windows/window_command.js",
   "js/rpg_windows/window_horz_command.js",

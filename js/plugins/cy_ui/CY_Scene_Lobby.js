@@ -32,11 +32,71 @@
             white: '#ffffff',
             yellow: '#f0f000'
         };
+        this.updateScale(); // Initialize scale
 
         this.createBackgroundPattern(); // New background pattern
         this.createPartyDisplay();
         this.createLobbyUI(); // Top bar
         this.createCommandWindow(); // Hexagon buttons
+    };
+
+    CY_Scene_Lobby.prototype.updateScale = function () {
+        var w = Graphics.width;
+        var h = Graphics.height;
+        this._uiScale = 1.0;
+        if (this._width < 1200) {
+            var baseW = 1200;
+            var baseH = 800;
+            var sW = this._width / baseW;
+            var sH = this._height / baseH;
+            this._uiScale = Math.min(sW, sH);
+        } else if (this._width > 2000) {
+            var baseW = 2000;
+            var baseH = 1000;
+            var sW = this._width / baseW;
+            var sH = this._height / baseH;
+            this._uiScale = Math.min(sW, sH);
+        }
+    };
+
+    CY_Scene_Lobby.prototype.resize = function () {
+        if (CY_Scene_MenuBase.prototype.resize) {
+            CY_Scene_MenuBase.prototype.resize.call(this);
+        } else {
+            Scene_MenuBase.prototype.resize.call(this);
+        }
+
+        this.updateScale();
+
+        // Refresh Background
+        if (this._bgPatternContainer) {
+            this.removeChild(this._bgPatternContainer);
+            this.createBackgroundPattern();
+        }
+
+        // Refresh Party
+        if (this._partyContainer) {
+            this.removeChild(this._partyContainer);
+            this.createPartyDisplay();
+        }
+
+        // Refresh Top Bar
+        if (this._lobbyContainer) {
+            this.removeChild(this._lobbyContainer);
+            this.createLobbyUI();
+        }
+
+        // Refresh Command Window
+        if (this._commandWindow) {
+            var index = this._commandWindow.index();
+            // Completely recreate the window to fix potential drawing context issues on resize
+            this._windowLayer.removeChild(this._commandWindow);
+            this._commandWindow = null;
+
+            this.createCommandWindow();
+            this._commandWindow.select(index);
+            this._commandWindow.activate();
+        }
     };
 
     // New 45 degree pattern background
@@ -48,23 +108,21 @@
 
         // 1. Skewed stripes pattern
         // Draw many lines at 45 degrees
-        g.lineStyle(2, 0x000000, 0.2);
+        // g.lineStyle(2, 0x000000, 0.2);
 
         // Covering the screen with diagonal lines
-        var step = 40;
+        // var step = 40;
         var w = Graphics.width;
         var h = Graphics.height;
-        var max = w + h;
+        // var max = w + h;
 
-        for (var i = -h; i < w; i += step) {
-            g.moveTo(i, 0);
-            g.lineTo(i + h, h);
-        }
+        // for (var i = -h; i < w; i += step) {
+        //     g.moveTo(i, 0);
+        //     g.lineTo(i + h, h);
+        // }
 
-        // 2. Bottom Triangle
-        // A large dark triangle at the bottom right or bottom?
-        // "alongside the bottom triangle" - likely a deco element.
-        // Let's put a dark graphic at bottom right.
+        // 2. Bottom Triangle Decoration
+        // A large dark triangle at the bottom right
         g.beginFill(0x000000, 0.5);
         g.moveTo(0, h);
         g.lineTo(w, h);
@@ -77,6 +135,9 @@
 
     CY_Scene_Lobby.prototype.createLobbyUI = function () {
         this._lobbyContainer = new PIXI.Container();
+        if (this._uiScale) {
+            this._lobbyContainer.scale.set(this._uiScale);
+        }
         this.addChild(this._lobbyContainer);
         this.createTopBar();
     };
@@ -146,19 +207,29 @@
 
         // Display the 3 party members on the left
         this._partyContainer = new PIXI.Container();
+        if (this._uiScale) {
+            this._partyContainer.scale.set(this._uiScale);
+        }
         this.addChild(this._partyContainer);
 
         var members = $gameParty.members();
 
         // Define a "Box" area for characters on the left side
-        var boxX = 300; // Center X of the group
-        var boxY = Graphics.height + 20; // Bottom alignment point
+        // Unscaled coordinates used inside container, container is scaled.
+        var boxX = 300;
+        var boxY = (Graphics.height / (this._uiScale || 1)) + 20; // Try to anchor bottom relative to unscaled height?
+        // Actually, if we scale the container, 'Graphics.height' inside the container is larger if we scale down.
+        // Let's stick to safe logic:
+
+        // If container is scaled 0.8:
+        // Drawing at y=1000 ends up at screen y=800.
+        // We want it at screen bottom.
+        // So y inside container = Graphics.height / scale.
+
+        var effectiveH = Graphics.height / (this._uiScale || 1.0);
+        boxY = effectiveH + 20;
 
         // Relative offsets from boxX, boxY
-        // 0: Leader (Center, Front)
-        // 1: Left Member (Left, Back)
-        // 2: Right Member (Right, Back)
-
         var positions = [
             { x: 0, y: 0, scale: 1.0, z: 2 }, // Center
             { x: -150, y: -20, scale: 0.85, z: 1 }, // Left
@@ -219,11 +290,14 @@
     CY_Window_LobbyCommand.prototype.constructor = CY_Window_LobbyCommand;
 
     CY_Window_LobbyCommand.prototype.initialize = function () {
-        var w = 600; // Increased area for diamond layout
+        var w = 600;
         var h = 500;
-        var x = Graphics.width - w; // Align to right
-        var y = (Graphics.height - h) / 2 + 50;
+        // Right adjusted with 20px padding
+        var x = Graphics.width - w - 20;
+        // Vertically centered
+        var y = (Graphics.height - h) / 2;
 
+        // Adjusted size for Pointy-Topped Hex
         this.hexWidth = 160;
         this.hexHeight = 140;
 
@@ -233,7 +307,7 @@
 
         CY_Window_Selectable.prototype.initialize.call(this, x, y, w, h);
 
-        this.opacity = 0; // Transparent background
+        this.opacity = 0;
         this.refresh();
         this.select(0);
         this.activate();
@@ -257,36 +331,27 @@
     CY_Window_LobbyCommand.prototype.callOkHandler = Window_Command.prototype.callOkHandler;
     CY_Window_LobbyCommand.prototype.findSymbol = Window_Command.prototype.findSymbol;
     CY_Window_LobbyCommand.prototype.selectSymbol = Window_Command.prototype.selectSymbol;
-
-    CY_Window_LobbyCommand.prototype.maxItems = function () {
-        return this._list.length;
-    };
-
+    CY_Window_LobbyCommand.prototype.maxItems = function () { return this._list.length; };
     CY_Window_LobbyCommand.prototype.makeCommandList = function () {
-        // Red color for borders as requested (accent)
-        // We will use CY_System colors in drawItem.
-        // We pass basic info here.
         this.addCommand("ATTACK", "attack", true);
         this.addCommand("VALKYRJA", "valkyrja", true);
         this.addCommand("EQUIPMENT", "equipment", true);
         this.addCommand("SUPPLY", "supply", true);
     };
 
-    // Override itemRect to place items in Diamond layout
+    // Override itemRect for Closer Diamond layout
     CY_Window_LobbyCommand.prototype.itemRect = function (index) {
         var rect = new Rectangle();
 
-        // Hexagon size parameters
         var hexWidth = this.hexWidth;
         var hexHeight = this.hexHeight;
 
-        // Window Center relative to contents
         var cx = this.width / 2 - this.standardPadding();
         var cy = this.height / 2 - this.standardPadding();
 
-        // Layout Offsets
-        var yOffset = 110;
-        var xOffset = 140;
+        // Closer packing for larger hexes
+        var yOffset = 115;
+        var xOffset = 85;
 
         var x, y;
 
@@ -321,16 +386,9 @@
 
     CY_Window_LobbyCommand.prototype.drawItem = function (index) {
         var rect = this.itemRect(index);
-        var data = this._list[index];
-        var label = data.name;
-
-        // Use CY_System colors or defaults
+        var label = this._list[index].name;
         var Colors = (typeof CY_Main !== 'undefined' && CY_Main.Colors) ? CY_Main.Colors : {
-            cyan: '#5CF5FA',
-            darkRed: '#842624',
-            lightRed: '#FF6158',
-            warning: '#f0f000',
-            white: '#ffffff'
+            cyan: '#5CF5FA', darkRed: '#842624', lightRed: '#FF6158', warning: '#f0f000', white: '#ffffff'
         };
 
         var ctx = this.contents.context;
@@ -339,58 +397,87 @@
         var w = rect.width;
         var h = rect.height;
 
-        // Draw Regular Hexagon
+        // Calculate Hexagon Geometry
         var cx = x + w / 2;
         var cy = y + h / 2;
-        var r = w / 2;
+        var rx = w / 2;
+        var ry = h / 2;
 
         ctx.save();
         ctx.beginPath();
+        // Pointy-Topped Hexagon: Vertices at -90 (Top), -30, 30, 90 (Bottom), 150, 210
         for (var i = 0; i < 6; i++) {
-            var angle_deg = 0 + (60 * i);
+            var angle_deg = -90 + (60 * i);
             var angle_rad = Math.PI / 180 * angle_deg;
-            var vx = cx + r * Math.cos(angle_rad);
-            var vy = cy + (r * 0.85) * Math.sin(angle_rad); // Squish height slightly
-
+            var vx = cx + rx * Math.cos(angle_rad);
+            var vy = cy + ry * Math.sin(angle_rad);
             if (i === 0) ctx.moveTo(vx, vy);
             else ctx.lineTo(vx, vy);
         }
         ctx.closePath();
 
-        // Fill: Semi-transparent black/red blend
-        // Using darkRed with low opacity for background
+        // Clip to hexagon for stripe drawing
+        ctx.save();
+        // Remove clip call if we aren't drawing stripes outside bounds, 
+        // but we are removing stripes entirely per request.
+
+        // 1. Fill Background
         ctx.fillStyle = 'rgba(20, 10, 10, 0.7)';
         ctx.fill();
 
-        // Border: Light Red by default
+        // 2. Stripes REMOVED per user request
+
+        // 3. Draw Border
+        // The previous issue was likely that the stroke was drawn AFTER clip, or clipped out, 
+        // or the path was closed and lost.
+        // We need to re-stroke the path we just filled.
         ctx.strokeStyle = Colors.lightRed;
         ctx.lineWidth = 2;
         ctx.stroke();
 
+        ctx.restore(); // Restore context (though we didn't clip this time)
+
+        // 4. Trace Bottom Triangle
+        // Needs to match the angle of the hexagon bottom.
+        // Hex bottom vertex is at 90 deg.
+        // Bottom-Right vertex is at 30 deg. Bottom-Left is 150 deg.
+        // We want a wide, flat triangle that mimics the bottom "V" of the hex.
+
+        var bY = cy + ry; // Bottom Y tip
+
+        // Slightly flatter triangle
+        var triH = 10;
+        var triW = 32;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(cx, bY - 4); // Bottom Tip (slightly inset from hex border)
+        ctx.lineTo(cx + triW / 2, bY - 4 - triH);
+        ctx.lineTo(cx - triW / 2, bY - 4 - triH);
+        ctx.closePath();
+
+        ctx.fillStyle = Colors.warning;
+        ctx.fill();
         ctx.restore();
 
-        // 2. Draw Text (Using makeTextSprite logic but on existing bitmap contents)
-        // Since we are inside a Window, we draw onto `this.contents`.
-        // We want bold text.
+        ctx.fillStyle = Colors.warning; // Yellow/Orange
+        ctx.fill();
 
+        ctx.restore();
+
+        // 5. Text
         this.contents.fontFace = 'GameFont';
-        this.contents.fontSize = 28; // Bolder/Larger
+        this.contents.fontSize = 28;
         this.contents.outlineColor = 'rgba(0,0,0,0.8)';
         this.contents.outlineWidth = 5;
-
         this.changeTextColor(Colors.white);
+        this.drawText(label, x, y + (h - 28) / 2 - 10, w, 'center');
 
-        // We can mimic bold by drawing slightly offset twice? 
-        // Or just using larger font. 28 is decently bold.
-
-        // Center text in rect
-        this.drawText(label, x, y + (h - 28) / 2, w, 'center');
-
-        // Add Sub-Label (Japanese/flavor text placeholder)
+        // Subtext
         this.contents.fontSize = 14;
         this.changeTextColor(Colors.cyan);
         var subText = (index === 0) ? "ACTION" : (index === 1) ? "UNIT" : (index === 2) ? "GEAR" : "SHOP";
-        this.drawText(subText, x, y + (h - 28) / 2 + 25, w, 'center');
+        this.drawText(subText, x, y + (h - 28) / 2 + 20, w, 'center');
     };
 
     // Update Highlight Position
@@ -411,17 +498,15 @@
                 targetY += this.standardPadding();
             }
 
-            this._highlightSprite.x = targetX;
-            this._highlightSprite.y = targetY;
-            this._highlightSprite.width = this.hexWidth + expansion * 2;
-            this._highlightSprite.height = this.hexHeight + expansion * 2;
-
+            this._highlightSprite.x = targetX + expansion * 0.5;
+            this._highlightSprite.y = targetY + expansion * 0.5;
+            this._highlightSprite.width = this.hexWidth + expansion * 1;
+            this._highlightSprite.height = this.hexHeight + expansion * 1;
             this._highlightSprite.visible = true;
 
-            this._expansion = expansion; // Store for refresh
+            this._expansion = expansion;
 
             if (this._lastSelectedIndex !== this.index()) {
-                // Refresh highlight geometry
                 this.refreshHighlight(rect.width, rect.height);
                 this._lastSelectedIndex = this.index();
                 this._highlightCurrentAlpha = 1.0;
@@ -429,16 +514,12 @@
         }
     };
 
-    // Refresh Highlight (Cyan Hexagon)
+    // Refresh Highlight (Pointy-Topped Hexagon)
     CY_Window_LobbyCommand.prototype.refreshHighlight = function (baseW, baseH) {
-        var Colors = (typeof CY_Main !== 'undefined' && CY_Main.Colors) ? CY_Main.Colors : {
-            cyan: '#5CF5FA'
-        };
-
-        // Calculated in updateHighlight, including expansion
+        var Colors = (typeof CY_Main !== 'undefined' && CY_Main.Colors) ? CY_Main.Colors : { cyan: '#5CF5FA' };
         var expansion = this._expansion || 10;
-        var w = baseW + (expansion * 2);
-        var h = baseH + (expansion * 2);
+        var w = baseW + (expansion * 1);
+        var h = baseH + (expansion * 1);
 
         var bmp = this._highlightSprite.bitmap;
         if (bmp.width !== w || bmp.height !== h) {
@@ -449,32 +530,30 @@
         var ctx = bmp.context;
         var cx = w / 2;
         var cy = h / 2;
-        var r = w / 2;
+        var rx = w / 2;
+        var ry = h / 2;
 
         ctx.save();
         ctx.beginPath();
+        // Match drawItem geometry: -90, -30, 30, 90, 150, 210
         for (var i = 0; i < 6; i++) {
-            var angle_deg = 0 + (60 * i);
+            var angle_deg = -90 + (60 * i);
             var angle_rad = Math.PI / 180 * angle_deg;
-            var vx = cx + r * Math.cos(angle_rad);
-            var vy = cy + (r * 0.85) * Math.sin(angle_rad);
-
+            var vx = cx + rx * Math.cos(angle_rad);
+            var vy = cy + ry * Math.sin(angle_rad);
             if (i === 0) ctx.moveTo(vx, vy);
             else ctx.lineTo(vx, vy);
         }
         ctx.closePath();
 
-        // Fill glow (Cyan)
         ctx.fillStyle = 'rgba(92, 245, 250, 0.2)';
         ctx.fill();
 
-        // Border (Cyan)
         ctx.strokeStyle = Colors.cyan;
-        ctx.lineWidth = 4;
+        ctx.lineWidth = 4; // Outer glow border
         ctx.stroke();
 
         ctx.restore();
-
         bmp._baseTexture.update();
     };
 

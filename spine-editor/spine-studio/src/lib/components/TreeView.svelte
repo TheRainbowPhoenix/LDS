@@ -12,7 +12,8 @@
             | "animation"
             | "image"
             | "audio"
-            | "root";
+            | "root"
+            | "attachment";
         children?: TreeItemData[];
     };
 </script>
@@ -27,17 +28,36 @@
 
     // -- Context for recursive components --
     const ctx = createTreeView({
-        defaultExpanded: ["root", "bones"],
+        defaultExpanded: ["root-skeleton", "bones", "draw-order"], // Expand common folders
     });
     setContext("tree", ctx);
 
     const {
         elements: { tree },
-        states: { selectedItem },
+        states: { selected, expanded },
     } = ctx;
 
-    // Sync selection to parent prop
-    $: if ($selectedItem) selectedId = $selectedItem.getAttribute("data-id");
+    // 1. Sync Internal Selection -> Parent Prop
+    // 'selected' is a Writable<string[]> usually
+    $: if ($selected && $selected.length > 0) {
+        const id = $selected[0];
+        if (id !== selectedId) {
+            selectedId = id;
+        }
+    }
+
+    // 2. Sync Parent Prop -> Internal Selection
+    $: if (selectedId) {
+        // Check if we need to update MeltUI state
+        // We use an array for 'selected' store
+        if (!$selected.includes(selectedId)) {
+            selected.set([selectedId]);
+
+            // Note: Auto-expanding to the item requires knowing the hierarchy path.
+            // Since we only have the ID here, we can't easily expand parents without traversing 'items'.
+            // For this MVP, we select the item. If it's in a collapsed folder, it might be hidden.
+        }
+    }
 </script>
 
 <div class="tree-container">

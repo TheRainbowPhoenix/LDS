@@ -43,7 +43,7 @@ CY_Scene_Options.LENS_PADDING = 0; // Padding to compensate for CRT lens distort
 // Initialization
 //-----------------------------------------------------------------------------
 
-CY_Scene_Options.prototype.initialize = function() {
+CY_Scene_Options.prototype.initialize = function () {
     Scene_MenuBase.prototype.initialize.call(this);
 };
 
@@ -51,7 +51,7 @@ CY_Scene_Options.prototype.initialize = function() {
 // Scene Lifecycle
 //-----------------------------------------------------------------------------
 
-CY_Scene_Options.prototype.create = function() {
+CY_Scene_Options.prototype.create = function () {
     Scene_MenuBase.prototype.create.call(this);
     this.createGradientBackground();
     this.createTabBar();
@@ -60,12 +60,66 @@ CY_Scene_Options.prototype.create = function() {
     // this.applyCRTFilter();
 };
 
-CY_Scene_Options.prototype.terminate = function() {
+CY_Scene_Options.prototype.terminate = function () {
     Scene_MenuBase.prototype.terminate.call(this);
     ConfigManager.save();
 };
 
-CY_Scene_Options.prototype.start = function() {
+CY_Scene_Options.prototype.resize = function () {
+    Scene_MenuBase.prototype.resize.call(this);
+
+    // 1. Resize Background
+    if (this._backgroundSprite) {
+        this.removeChild(this._backgroundSprite);
+        this.createBackground();
+        // Move to bottom
+        this.setChildIndex(this._backgroundSprite, 0);
+        this.createGradientBackground();
+    }
+
+    // 2. Resize TabBar
+    if (this._tabBar) {
+        var offsets = {
+            x: 0, y: 0,
+            fullWidth: Graphics.width,
+            fullHeight: Graphics.height
+        };
+        var lensPadding = CY_Scene_Options.LENS_PADDING;
+        var tabBarX = Math.floor((Graphics.boxWidth - this._tabBar.width) / 2);
+        var tabBarY = offsets.y + lensPadding;
+        this._tabBar.move(tabBarX, tabBarY, this._tabBar.width, this._tabBar.height);
+    }
+
+    // 3. Resize Options Window
+    if (this._optionsWindow) {
+        var offsets = {
+            x: 0, y: 0,
+            fullWidth: Graphics.width,
+            fullHeight: Graphics.height
+        };
+        const pad = 12;
+        var lensPadding = CY_Scene_Options.LENS_PADDING;
+        var maxWidth = CY_Scene_Options.MAX_OPTIONS_WIDTH;
+        var width = Math.min(maxWidth, Graphics.boxWidth - 40);
+        var x = Math.floor((Graphics.boxWidth - width) / 2);
+        var y = offsets.x + lensPadding + CY_Scene_Options.TAB_BAR_HEIGHT + pad;
+        var height = offsets.fullHeight - CY_Scene_Options.TAB_BAR_HEIGHT - CY_Scene_Options.ACTION_BAR_HEIGHT - (lensPadding * 2) - pad * 2;
+
+        this._optionsWindow.move(x, y, width, height);
+    }
+
+    // 4. Resize ActionBar
+    if (this._actionBar) {
+        var offsets = this.getScreenOffsets();
+        var lensPadding = CY_Scene_Options.LENS_PADDING;
+        var width = offsets.fullWidth;
+        var height = CY_Scene_Options.ACTION_BAR_HEIGHT;
+        var y = offsets.fullHeight - height - lensPadding + offsets.y;
+        this._actionBar.move(offsets.x, y, width, height);
+    }
+};
+
+CY_Scene_Options.prototype.start = function () {
     Scene_MenuBase.prototype.start.call(this);
     this._tabBar.activate();
     this._lastFocus = 'tabBar';
@@ -79,7 +133,7 @@ CY_Scene_Options.prototype.start = function() {
 /**
  * Override createBackground to use custom gradient.
  */
-CY_Scene_Options.prototype.createBackground = function() {
+CY_Scene_Options.prototype.createBackground = function () {
     // Don't call parent - we create our own background
     this._backgroundSprite = new Sprite();
     this._backgroundSprite.bitmap = new Bitmap(Graphics.width, Graphics.height);
@@ -90,23 +144,23 @@ CY_Scene_Options.prototype.createBackground = function() {
  * Create the gradient background.
  * Top: #39141B, Center: #06060E, Bottom: #08090E
  */
-CY_Scene_Options.prototype.createGradientBackground = function() {
+CY_Scene_Options.prototype.createGradientBackground = function () {
     if (!this._backgroundSprite) return;
-    
+
     var bmp = this._backgroundSprite.bitmap;
     var ctx = bmp._context;
     var w = Graphics.width;
     var h = Graphics.height;
-    
+
     // Create vertical gradient
     var gradient = ctx.createLinearGradient(0, 0, 0, h);
     gradient.addColorStop(0, '#39141B');    // Top - dark red
     gradient.addColorStop(0.5, '#06060E');  // Center - very dark
     gradient.addColorStop(1, '#08090E');    // Bottom - near black
-    
+
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, w, h);
-    
+
     bmp._baseTexture.update();
 };
 
@@ -119,10 +173,10 @@ CY_Scene_Options.prototype.createGradientBackground = function() {
  * Creates pincushion distortion (concave/inward curved edges), sharp ghost shadow,
  * and edge noise trail glitch effect (dead pixel lines on left/right edges).
  */
-CY_Scene_Options.prototype.applyCRTFilter = function() {
+CY_Scene_Options.prototype.applyCRTFilter = function () {
     if (!PIXI.Filter) return;
     return;
-    
+
     var crtFragmentShader = `
         precision mediump float;
         
@@ -221,7 +275,7 @@ CY_Scene_Options.prototype.applyCRTFilter = function() {
             gl_FragColor = color;
         }
     `;
-    
+
     try {
         this._crtFilter = new PIXI.Filter(null, crtFragmentShader, {
             uTime: 0.0,
@@ -230,7 +284,7 @@ CY_Scene_Options.prototype.applyCRTFilter = function() {
             uGhostOpacity: 0.12,    // Ghost shadow opacity (subtle but visible)
             uEdgeNoiseWidth: 0.025  // Width of edge noise effect (2.5% of screen)
         });
-        
+
         // Apply filter only if CRT shader is enabled (default to true)
         var crtEnabled = ConfigManager.crtShader !== false;
         if (crtEnabled) {
@@ -246,10 +300,10 @@ CY_Scene_Options.prototype.applyCRTFilter = function() {
  * Update CRT shader time uniform for animation.
  * Also checks if CRT shader is enabled in settings.
  */
-CY_Scene_Options.prototype.updateCRTFilter = function() {
+CY_Scene_Options.prototype.updateCRTFilter = function () {
     // Check if CRT shader is enabled (default to true if not set)
     var crtEnabled = ConfigManager.crtShader !== false;
-    
+
     if (this._crtFilter) {
         // Toggle filter visibility based on setting
         if (crtEnabled && !this.filters) {
@@ -257,7 +311,7 @@ CY_Scene_Options.prototype.updateCRTFilter = function() {
         } else if (!crtEnabled && this.filters) {
             this.filters = null;
         }
-        
+
         // Update animation if enabled
         if (crtEnabled && this._crtFilter.uniforms) {
             this._crtTime += 0.016;
@@ -274,7 +328,7 @@ CY_Scene_Options.prototype.updateCRTFilter = function() {
 /**
  * Calculate the offset needed to go from boxWidth/boxHeight to full screen.
  */
-CY_Scene_Options.prototype.getScreenOffsets = function() {
+CY_Scene_Options.prototype.getScreenOffsets = function () {
     return {
         x: -Math.floor((Graphics.width - Graphics.boxWidth) / 2),
         y: -Math.floor((Graphics.height - Graphics.boxHeight) / 2),
@@ -286,14 +340,14 @@ CY_Scene_Options.prototype.getScreenOffsets = function() {
 /**
  * Create the tab bar window - centered at top with fixed width.
  */
-CY_Scene_Options.prototype.createTabBar = function() {
+CY_Scene_Options.prototype.createTabBar = function () {
     var offsets = {
         x: 0, y: 0,
         fullWidth: Graphics.width,
         fullHeight: Graphics.height
     }; // this.getScreenOffsets();
     var lensPadding = CY_Scene_Options.LENS_PADDING;
-    
+
     this._tabBar = new CY_Window_TabBar(['SOUND', 'CONTROLS', 'GAMEPLAY']);
     // Center the tab bar horizontally, add top padding for lens compensation
     var tabBarX = Math.floor((Graphics.boxWidth - this._tabBar.width) / 2);
@@ -313,7 +367,7 @@ CY_Scene_Options.prototype.createTabBar = function() {
 /**
  * Create the options window - centered with max width, transparent background.
  */
-CY_Scene_Options.prototype.createOptionsWindow = function() {
+CY_Scene_Options.prototype.createOptionsWindow = function () {
     var offsets = {
         x: 0, y: 0,
         fullWidth: Graphics.width,
@@ -339,21 +393,21 @@ CY_Scene_Options.prototype.createOptionsWindow = function() {
         this._optionsWindow._cyBackSprite.visible = false;
     }
     this.addWindow(this._optionsWindow);
-    
+
     this.loadTabOptions(0);
 };
 
 /**
  * Create the action bar window - full width at bottom.
  */
-CY_Scene_Options.prototype.createActionBar = function() {
+CY_Scene_Options.prototype.createActionBar = function () {
     var offsets = this.getScreenOffsets();
     var lensPadding = CY_Scene_Options.LENS_PADDING;
     var width = offsets.fullWidth;
     var height = CY_Scene_Options.ACTION_BAR_HEIGHT;
     // Position with bottom lens padding
     var y = offsets.fullHeight - height - lensPadding + offsets.y;
-    
+
     this._actionBar = new CY_Window_ActionBar();
     this._actionBar.move(offsets.x, y, width, height);
     this._actionBar.opacity = 0; // Transparent window chrome
@@ -369,11 +423,11 @@ CY_Scene_Options.prototype.createActionBar = function() {
 /**
  * Update action bar based on current active window.
  */
-CY_Scene_Options.prototype.updateActionBar = function() {
+CY_Scene_Options.prototype.updateActionBar = function () {
     if (!this._actionBar) return;
-    
+
     var actions = [];
-    
+
     if (this._tabBar && this._tabBar.active) {
         actions = [
             { button: 'B', label: 'Back' },
@@ -394,7 +448,7 @@ CY_Scene_Options.prototype.updateActionBar = function() {
             { button: 'A', label: 'Select' }
         ];
     }
-    
+
     this._actionBar.setActions(actions);
 };
 
@@ -402,9 +456,9 @@ CY_Scene_Options.prototype.updateActionBar = function() {
 // Data Logic
 //-----------------------------------------------------------------------------
 
-CY_Scene_Options.prototype.loadTabOptions = function(tabIndex) {
+CY_Scene_Options.prototype.loadTabOptions = function (tabIndex) {
     var options = [];
-    
+
     switch (tabIndex) {
         case 0: // SOUND
             options = [
@@ -416,7 +470,7 @@ CY_Scene_Options.prototype.loadTabOptions = function(tabIndex) {
                 { type: 'toggle', label: 'Mute Detection Sounds', symbol: 'muteDetection' }
             ];
             break;
-            
+
         case 1: // CONTROLS
             options = [
                 { type: 'header', label: 'Input' },
@@ -424,7 +478,7 @@ CY_Scene_Options.prototype.loadTabOptions = function(tabIndex) {
                 { type: 'toggle', label: 'Command Remember', symbol: 'commandRemember' }
             ];
             break;
-            
+
         case 2: // GAMEPLAY
             options = [
                 { type: 'header', label: 'Display' },
@@ -436,7 +490,7 @@ CY_Scene_Options.prototype.loadTabOptions = function(tabIndex) {
             ];
             break;
     }
-    
+
     this._optionsWindow.setOptions(options);
 };
 
@@ -444,14 +498,14 @@ CY_Scene_Options.prototype.loadTabOptions = function(tabIndex) {
 // Handler Methods
 //-----------------------------------------------------------------------------
 
-CY_Scene_Options.prototype.onTabOk = function() {
+CY_Scene_Options.prototype.onTabOk = function () {
     this.loadTabOptions(this._tabBar.index());
     this._optionsWindow.activate();
     this._optionsWindow.select(0);
     this.updateActionBar();
 };
 
-CY_Scene_Options.prototype.onOptionsCancel = function() {
+CY_Scene_Options.prototype.onOptionsCancel = function () {
     this._optionsWindow.deselect();
     this._tabBar.activate();
     this.updateActionBar();
@@ -461,9 +515,9 @@ CY_Scene_Options.prototype.onOptionsCancel = function() {
 // Input & Update
 //-----------------------------------------------------------------------------
 
-CY_Scene_Options.prototype.update = function() {
+CY_Scene_Options.prototype.update = function () {
     Scene_MenuBase.prototype.update.call(this);
-    
+
     // Update CRT shader animation
     this.updateCRTFilter();
     if (Input.isTriggered('pageup')) {
@@ -471,10 +525,10 @@ CY_Scene_Options.prototype.update = function() {
     } else if (Input.isTriggered('pagedown')) {
         this.switchTab(1);
     }
-    
+
     // Handle tab bar clicks even when options window is active
     this.updateTabBarClick();
-    
+
     this.updateActionBarOnFocusChange();
 };
 
@@ -482,19 +536,19 @@ CY_Scene_Options.prototype.update = function() {
  * Check for mouse clicks on the tab bar and switch tabs accordingly.
  * This allows clicking tabs even when the options window has focus.
  */
-CY_Scene_Options.prototype.updateTabBarClick = function() {
+CY_Scene_Options.prototype.updateTabBarClick = function () {
     if (TouchInput.isTriggered() && this._tabBar) {
         var tabIndex = this._tabBar.getTabIndexAt(TouchInput.x, TouchInput.y);
         if (tabIndex >= 0 && tabIndex !== this._tabBar.index()) {
             // Switch to clicked tab
             this._tabBar.select(tabIndex);
             this.loadTabOptions(tabIndex);
-            
+
             // If options window was active, keep it active but reset selection
             if (this._optionsWindow.active) {
                 this._optionsWindow.select(0);
             }
-            
+
             SoundManager.playCursor();
         } else if (tabIndex >= 0 && this._optionsWindow.active) {
             // Clicked on current tab while options active - switch focus to tab bar
@@ -507,27 +561,27 @@ CY_Scene_Options.prototype.updateTabBarClick = function() {
     }
 };
 
-CY_Scene_Options.prototype.updateActionBarOnFocusChange = function() {
-    var currentFocus = this._tabBar.active ? 'tabBar' : 
-                       this._optionsWindow.active ? 'options' : 'none';
-    
+CY_Scene_Options.prototype.updateActionBarOnFocusChange = function () {
+    var currentFocus = this._tabBar.active ? 'tabBar' :
+        this._optionsWindow.active ? 'options' : 'none';
+
     if (this._lastFocus !== currentFocus) {
         this._lastFocus = currentFocus;
         this.updateActionBar();
     }
 };
 
-CY_Scene_Options.prototype.switchTab = function(direction) {
+CY_Scene_Options.prototype.switchTab = function (direction) {
     var tabCount = 3;
     var currentIndex = this._tabBar.index();
     var newIndex = (currentIndex + direction + tabCount) % tabCount;
-    
+
     this._tabBar.select(newIndex);
     this.loadTabOptions(newIndex);
-    
+
     if (this._optionsWindow.active) {
         this._optionsWindow.select(0);
     }
-    
+
     SoundManager.playCursor();
 };

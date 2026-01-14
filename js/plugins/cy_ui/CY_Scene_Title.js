@@ -136,6 +136,81 @@ CY_Scene_Title.prototype.terminate = function () {
     SceneManager.snapForBackground();
 };
 
+/**
+ * Handle scene resize events.
+ */
+CY_Scene_Title.prototype.resize = function () {
+    Scene_Base.prototype.resize.call(this);
+
+    // 1. Update Background Position
+    if (this._backSprite) {
+        this.centerSprite(this._backSprite);
+    }
+
+    // 2. Update Gradient Fallback
+    if (this._gradientFallback) {
+        this._gradientFallback.clear();
+        this._gradientFallback.beginFill(0x0a0a0a);
+        this._gradientFallback.drawRect(0, 0, Graphics.width, Graphics.height);
+        this._gradientFallback.beginFill(0x842624, 0.2);
+        this._gradientFallback.drawCircle(Graphics.width / 2, Graphics.height / 2, Graphics.width / 1.5);
+        this._gradientFallback.endFill();
+    }
+
+    // 3. Refresh Side Stripe (Recreating it to handle new height)
+    if (this._sideStripeContainer) {
+        this.removeChild(this._sideStripeContainer);
+        this.createSideStripe(); // This creates and adds a new container
+
+        // Ensure it's behind the logo/command window but above background
+        // The z-ordering relies on addition order. 
+        // We might need to adjust child index to be correct.
+        // Current creation order: BG -> SideStripe -> Spine -> Logo -> Command
+
+        // Let's try to restore the correct index of the side stripe
+        // But since we removed it, we just need to make sure it's not on top of everything.
+
+        // A simple way to get z-ordering right is using specific layers or sorting.
+        // Or we can just use setChildIndex.
+        // Assuming _backSprite is at 0 (or 1 if gradient is 0).
+        var index = 0;
+        if (this._gradientFallback) index++;
+        if (this._backSprite) index++;
+
+        if (this.getChildIndex(this._sideStripeContainer) !== -1) {
+            this.setChildIndex(this._sideStripeContainer, index);
+        }
+    }
+
+    // 4. Update Logo Position
+    if (this._logoSprite) {
+        this._logoSprite.y = Math.floor(Graphics.boxHeight / 2) - 150;
+    }
+
+    // 5. Update Spine Position
+    if (this._titleSpine) {
+        this._titleSpine.x = Graphics.width - 500;
+        this._titleSpine.y = Graphics.height - 50;
+    }
+
+    // 6. Update Command Window
+    if (this._commandWindow) {
+        // If it has a custom updatePlacement, call it.
+        // Otherwise, standard Window_TitleCommand calls updatePlacement in initialize usually.
+        // We can force a refresh if needed or just position it if we knew the logic (it's custom here).
+        // Since we don't have CY_Window_TitleCommand source, we'll try updatePlacement if it exists.
+        if (this._commandWindow.updatePlacement) {
+            this._commandWindow.updatePlacement();
+        } else {
+            // Fallback logic if needed, e.g. recenter
+            this._commandWindow.x = (Graphics.boxWidth - this._commandWindow.width) / 2;
+            this._commandWindow.y = Graphics.boxHeight - this._commandWindow.height - 96;
+            // But wait, the comment says "Command menu below logo on left side".
+            // So it's likely fixed X.
+        }
+    }
+};
+
 //-----------------------------------------------------------------------------
 // Background Creation
 //-----------------------------------------------------------------------------

@@ -25,7 +25,7 @@ Scene_Base.prototype.constructor = Scene_Base;
  * @instance 
  * @memberof Scene_Base
  */
-Scene_Base.prototype.initialize = function() {
+Scene_Base.prototype.initialize = function () {
     Stage.prototype.initialize.call(this);
     this._active = false;
     this._fadeSign = 0;
@@ -41,7 +41,7 @@ Scene_Base.prototype.initialize = function() {
  * @instance 
  * @memberof Scene_Base
  */
-Scene_Base.prototype.attachReservation = function() {
+Scene_Base.prototype.attachReservation = function () {
     ImageManager.setDefaultReservationId(this._imageReservationId);
 };
 
@@ -52,7 +52,7 @@ Scene_Base.prototype.attachReservation = function() {
  * @instance 
  * @memberof Scene_Base
  */
-Scene_Base.prototype.detachReservation = function() {
+Scene_Base.prototype.detachReservation = function () {
     ImageManager.releaseReservation(this._imageReservationId);
 };
 
@@ -63,7 +63,7 @@ Scene_Base.prototype.detachReservation = function() {
  * @instance 
  * @memberof Scene_Base
  */
-Scene_Base.prototype.create = function() {
+Scene_Base.prototype.create = function () {
 };
 
 /**
@@ -74,7 +74,7 @@ Scene_Base.prototype.create = function() {
  * @memberof Scene_Base
  * @return {Boolean} return true if the scene is active
  */
-Scene_Base.prototype.isActive = function() {
+Scene_Base.prototype.isActive = function () {
     return this._active;
 };
 
@@ -86,7 +86,7 @@ Scene_Base.prototype.isActive = function() {
  * @memberof Scene_Base
  * @return {Boolean} Return true if the scene is ready to start
  */
-Scene_Base.prototype.isReady = function() {
+Scene_Base.prototype.isReady = function () {
     return ImageManager.isReady();
 };
 
@@ -97,7 +97,7 @@ Scene_Base.prototype.isReady = function() {
  * @instance 
  * @memberof Scene_Base
  */
-Scene_Base.prototype.start = function() {
+Scene_Base.prototype.start = function () {
     this._active = true;
 };
 
@@ -108,7 +108,7 @@ Scene_Base.prototype.start = function() {
  * @instance 
  * @memberof Scene_Base
  */
-Scene_Base.prototype.update = function() {
+Scene_Base.prototype.update = function () {
     this.updateFade();
     this.updateChildren();
 };
@@ -120,7 +120,7 @@ Scene_Base.prototype.update = function() {
  * @instance 
  * @memberof Scene_Base
  */
-Scene_Base.prototype.stop = function() {
+Scene_Base.prototype.stop = function () {
     this._active = false;
 };
 
@@ -133,7 +133,7 @@ Scene_Base.prototype.stop = function() {
  * @memberof Scene_Base
  * @return {Boolean} Return true if the scene is currently busy
  */
-Scene_Base.prototype.isBusy = function() {
+Scene_Base.prototype.isBusy = function () {
     return this._fadeDuration > 0;
 };
 
@@ -144,7 +144,24 @@ Scene_Base.prototype.isBusy = function() {
  * @instance 
  * @memberof Scene_Base
  */
-Scene_Base.prototype.terminate = function() {
+Scene_Base.prototype.terminate = function () {
+};
+
+/**
+ * Resize the scene and its window layer.
+ * 
+ * @method resize
+ * @instance 
+ * @memberof Scene_Base
+ */
+Scene_Base.prototype.resize = function () {
+    if (this._windowLayer) {
+        var width = Graphics.boxWidth;
+        var height = Graphics.boxHeight;
+        var x = (Graphics.width - width) / 2;
+        var y = (Graphics.height - height) / 2;
+        this._windowLayer.move(x, y, width, height);
+    }
 };
 
 /**
@@ -155,7 +172,7 @@ Scene_Base.prototype.terminate = function() {
  * @instance 
  * @memberof Scene_Base
  */
-Scene_Base.prototype.createWindowLayer = function() {
+Scene_Base.prototype.createWindowLayer = function () {
     var width = Graphics.boxWidth;
     var height = Graphics.boxHeight;
     var x = (Graphics.width - width) / 2;
@@ -172,7 +189,7 @@ Scene_Base.prototype.createWindowLayer = function() {
  * @instance 
  * @memberof Scene_Base
  */
-Scene_Base.prototype.addWindow = function(window) {
+Scene_Base.prototype.addWindow = function (window) {
     this._windowLayer.addChild(window);
 };
 
@@ -186,7 +203,7 @@ Scene_Base.prototype.addWindow = function(window) {
  * @instance 
  * @memberof Scene_Base
  */
-Scene_Base.prototype.startFadeIn = function(duration, white) {
+Scene_Base.prototype.startFadeIn = function (duration, white) {
     this.createFadeSprite(white);
     this._fadeSign = 1;
     this._fadeDuration = duration || 30;
@@ -203,7 +220,7 @@ Scene_Base.prototype.startFadeIn = function(duration, white) {
  * @instance 
  * @memberof Scene_Base
  */
-Scene_Base.prototype.startFadeOut = function(duration, white) {
+Scene_Base.prototype.startFadeOut = function (duration, white) {
     this.createFadeSprite(white);
     this._fadeSign = -1;
     this._fadeDuration = duration || 30;
@@ -218,7 +235,7 @@ Scene_Base.prototype.startFadeOut = function(duration, white) {
  * @instance 
  * @memberof Scene_Base
  */
-Scene_Base.prototype.createFadeSprite = function(white) {
+Scene_Base.prototype.createFadeSprite = function (white) {
     if (!this._fadeSprite) {
         this._fadeSprite = new ScreenSprite();
         this.addChild(this._fadeSprite);
@@ -237,7 +254,7 @@ Scene_Base.prototype.createFadeSprite = function(white) {
  * @instance 
  * @memberof Scene_Base
  */
-Scene_Base.prototype.updateFade = function() {
+Scene_Base.prototype.updateFade = function () {
     if (this._fadeDuration > 0) {
         var d = this._fadeDuration;
         if (this._fadeSign > 0) {
@@ -256,8 +273,8 @@ Scene_Base.prototype.updateFade = function() {
  * @instance 
  * @memberof Scene_Base
  */
-Scene_Base.prototype.updateChildren = function() {
-    this.children.forEach(function(child) {
+Scene_Base.prototype.updateChildren = function () {
+    this.children.forEach(function (child) {
         if (child.update) {
             child.update();
         }
@@ -272,7 +289,7 @@ Scene_Base.prototype.updateChildren = function() {
  * @instance 
  * @memberof Scene_Base
  */
-Scene_Base.prototype.popScene = function() {
+Scene_Base.prototype.popScene = function () {
     SceneManager.pop();
 };
 
@@ -283,7 +300,7 @@ Scene_Base.prototype.popScene = function() {
  * @instance 
  * @memberof Scene_Base
  */
-Scene_Base.prototype.checkGameover = function() {
+Scene_Base.prototype.checkGameover = function () {
     if ($gameParty.isAllDead()) {
         SceneManager.goto(Scene_Gameover);
     }
@@ -296,7 +313,7 @@ Scene_Base.prototype.checkGameover = function() {
  * @instance 
  * @memberof Scene_Base
  */
-Scene_Base.prototype.fadeOutAll = function() {
+Scene_Base.prototype.fadeOutAll = function () {
     var time = this.slowFadeSpeed() / 60;
     AudioManager.fadeOutBgm(time);
     AudioManager.fadeOutBgs(time);
@@ -312,7 +329,7 @@ Scene_Base.prototype.fadeOutAll = function() {
  * @memberof Scene_Base
  * @return {Number} Return the fade speed
  */
-Scene_Base.prototype.fadeSpeed = function() {
+Scene_Base.prototype.fadeSpeed = function () {
     return 24;
 };
 
@@ -324,6 +341,6 @@ Scene_Base.prototype.fadeSpeed = function() {
  * @memberof Scene_Base
  * @return {Number} Return the fade speed
  */
-Scene_Base.prototype.slowFadeSpeed = function() {
+Scene_Base.prototype.slowFadeSpeed = function () {
     return this.fadeSpeed() * 2;
 };

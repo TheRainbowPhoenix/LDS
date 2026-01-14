@@ -199,6 +199,47 @@ CY_Scene_File.prototype.onDeleteSave = function () {
     }
 };
 
+//-----------------------------------------------------------------------------
+// Resize
+//-----------------------------------------------------------------------------
+
+CY_Scene_File.prototype.resize = function () {
+    CY_Scene_MenuBase.prototype.resize.call(this);
+
+    // 1. Refresh Title Bar
+    if (this._titleBarSprite) {
+        this.removeChild(this._titleBarSprite);
+        this.createTitleBar();
+    }
+
+    // 2. Refresh Save List
+    if (this._saveListWindow) {
+        // Need to fully recreate for metrics? Or move?
+        // CY_Window_SaveList might rely on fixed width? 
+        // Let's move and resize.
+        var offsets = this.getScreenOffsets();
+        var lensPadding = this.getLensPadding();
+
+        var width = 600;
+        var x = Math.floor((Graphics.boxWidth - width) / 2);
+        var y = offsets.y + lensPadding + CY_Scene_MenuBase.TOP_BAR_HEIGHT + this.ui_margin * 2;
+        var bottomY = offsets.y + Graphics.height - lensPadding - CY_Scene_MenuBase.ACTION_BAR_HEIGHT;
+        var height = bottomY - y - (this.ui_margin * 2);
+
+        this._saveListWindow.move(x, y + this.ui_margin, width, height);
+        this._saveListWindow.refresh();
+    }
+
+    // 3. Refresh Action Bar
+    if (this._actionBar) {
+        var offsets = this.getScreenOffsets();
+        var lensPadding = this.getLensPadding();
+        var width = Graphics.width;
+        var height = CY_Scene_MenuBase.ACTION_BAR_HEIGHT;
+        var y = 0 + Graphics.height - height - lensPadding - this.ui_margin * 2;
+        this._actionBar.move(0, y, width, height);
+    }
+};
 
 //=============================================================================
 // CY_Scene_Save

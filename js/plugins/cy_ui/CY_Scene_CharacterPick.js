@@ -231,6 +231,63 @@ CY_Scene_CharacterPick.prototype.create = function () {
     this.refreshInfo();
 };
 
+CY_Scene_CharacterPick.prototype.resize = function () {
+    Scene_MenuBase.prototype.resize.call(this);
+
+    // 1. Re-calc Scale
+    var w = Graphics.width;
+    var h = Graphics.height;
+    this._uiScale = 1.0;
+    if (w < 1600 || h < 800) {
+        var scaleW = w / 1920;
+        var scaleH = h / 1080;
+        this._uiScale = Math.min(scaleW, scaleH);
+        this._uiScale = Math.max(0.6, this._uiScale);
+    }
+
+    // 2. Refresh Decorations
+    if (this._decorationContainer) {
+        this.removeChild(this._decorationContainer);
+        this.createDecorations();
+    }
+
+    // 3. Refresh TitleBar
+    if (this._titleBarSprite) {
+        this.removeChild(this._titleBarSprite);
+        this.createTitleBar();
+    }
+
+    // 4. Refresh TeamList
+    if (this._teamListContainer) {
+        this.removeChild(this._teamListContainer);
+        this.createTeamList();
+    }
+
+    // 5. Refresh Character Sprite / Spine Area
+    // Need to clean up old sprites first
+    if (this._characterSprite) this.removeChild(this._characterSprite);
+    if (this._spineAvatar) this.removeChild(this._spineAvatar);
+    this.createCharacterSprite();
+
+    // 6. Refresh Right Panel
+    if (this._infoContainer) {
+        this.removeChild(this._infoContainer);
+        this.createRightPanel();
+    }
+
+    // 7. Re-position Command Window (destroy and recreate to ensure metrics)
+    if (this._commandWindow) {
+        // Remove old
+        this._windowLayer.removeChild(this._commandWindow);
+        this._commandWindow = null;
+        this.createCommandWindow();
+        this._commandWindow.select(1); // Restore selection if you want, but default is OK
+    }
+
+    // 8. Refresh Content
+    this.refreshInfo();
+};
+
 CY_Scene_CharacterPick.prototype.createDecorations = function () {
     this._decorationContainer = new PIXI.Container();
     this._decorationContainer.scale.set(this._uiScale);
@@ -741,7 +798,7 @@ CY_Scene_CharacterPick.prototype.createCommandWindow = function () {
     this._commandWindow = new CY_Window_CharPickActions(x, y, w, h);
 
     this._commandWindow.setHandler('ok', this.onCommandOk.bind(this));
-    this._commandWindow.setHandler('cancel', this.popScene.bind(this));
+    this._commandWindow.setHandler('cancel', this.onCancel.bind(this));
 
     this._commandWindow.activate();
     this.addWindow(this._commandWindow);
@@ -759,6 +816,10 @@ CY_Scene_CharacterPick.prototype.onCommandOk = function () {
         // NEXT
         this.onNext();
     }
+};
+
+CY_Scene_CharacterPick.prototype.onCancel = function () {
+    SceneManager.goto(Scene_Title);
 };
 
 CY_Scene_CharacterPick.prototype.onPrev = function () {

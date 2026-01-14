@@ -9,6 +9,7 @@ export const skeletonData = writable<SkeletonData | null>(null);
 export const selectedNode = writable<Bone | Slot | BoneData | SlotData | null>(null);
 export const renderingScale = writable<number>(1.0);
 export const currentTool = writable<'select' | 'translate' | 'rotate' | 'scale'>('select');
+export const meshTool = writable<'move' | 'add' | 'remove'>('move');
 
 // --- History System ---
 export interface HistoryAction {

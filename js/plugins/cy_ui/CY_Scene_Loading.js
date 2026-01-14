@@ -42,6 +42,23 @@ CY_Loading_Visuals.prototype.initialize = function () {
     // Check for minimal mode (First boot)
     this._isMinimal = typeof $dataSystem === 'undefined' || !$dataSystem;
 
+    // Scaling Logic
+    this._uiScale = 1.0;
+    // Base: 1600x800. Scale if < 1600 or > 2000
+    if (this._width < 1200) {
+        var baseW = 1200;
+        var baseH = 800;
+        var sW = this._width / baseW;
+        var sH = this._height / baseH;
+        this._uiScale = Math.min(sW, sH);
+    } else if (this._width > 2000) {
+        var baseW = 2000;
+        var baseH = 1000;
+        var sW = this._width / baseW;
+        var sH = this._height / baseH;
+        this._uiScale = Math.min(sW, sH);
+    }
+
     this.createBackground();
     this.createUILayer();
 };
@@ -176,66 +193,68 @@ CY_Loading_Visuals.prototype.createVisualElements = function () {
 
     var w = this._width;
     var h = this._height;
-    var barHeight = 90;
+    var s = this._uiScale;
+
+    var barHeight = 90 * s;
     var redColor = parseInt(CY_System.Colors.lightRed.replace("#", ""), 16);
 
     // Black Bars
     g.beginFill(0x000000);
-    g.drawRect(0, 0, w, barHeight + 5);
-    g.drawRect(w * 0.25, 0, w * 0.75, barHeight + 10);
-    g.drawRect(0, h - barHeight - 5, w, barHeight + 5);
-    g.drawRect(w * 0.75, h - barHeight - 10, w, 10);
+    g.drawRect(0, 0, w, barHeight + 5 * s);
+    g.drawRect(w * 0.25, 0, w * 0.75, barHeight + 10 * s);
+    g.drawRect(0, h - barHeight - 5 * s, w, barHeight + 5 * s);
+    g.drawRect(w * 0.75, h - barHeight - 10 * s, w, 10 * s);
     g.endFill();
 
     // Red Lines with Jumps
-    g.lineStyle(2, redColor, 1);
+    g.lineStyle(2 * s, redColor, 1);
 
-    var lineYTop = barHeight + 5;
+    var lineYTop = barHeight + 5 * s;
     var jumpXTop = w * 0.25;
     g.moveTo(0, lineYTop);
     g.lineTo(jumpXTop, lineYTop);
-    g.lineTo(jumpXTop, lineYTop + 5);
-    g.lineTo(w, lineYTop + 5);
+    g.lineTo(jumpXTop, lineYTop + 5 * s);
+    g.lineTo(w, lineYTop + 5 * s);
 
-    var lineYBot = h - barHeight - 5;
+    var lineYBot = h - barHeight - 5 * s;
     var jumpXBot = w * 0.75;
     g.moveTo(0, lineYBot);
     g.lineTo(jumpXBot, lineYBot);
-    g.lineTo(jumpXBot, lineYBot - 5);
-    g.lineTo(w, lineYBot - 5);
+    g.lineTo(jumpXBot, lineYBot - 5 * s);
+    g.lineTo(w, lineYBot - 5 * s);
 
     // Top Left Boxes
-    g.lineStyle(1, redColor, 0.8);
+    g.lineStyle(1 * s, redColor, 0.8);
     g.beginFill(0x000000, 0.5);
-    g.drawRect(40, 25, 160, 30);
+    g.drawRect(40 * s, 25 * s, 160 * s, 30 * s);
     g.endFill();
 
-    g.lineStyle(1, redColor, 0.8);
+    g.lineStyle(1 * s, redColor, 0.8);
     g.beginFill(0x000000, 0.5);
-    g.drawRect(200, 25, 380, 30);
+    g.drawRect(200 * s, 25 * s, 380 * s, 30 * s);
     g.endFill();
 
     // Bottom Right Box
-    var brX = w - 210 - 20;
-    var brY = h - 65;
-    g.lineStyle(1, redColor);
+    var brX = w - (210 * s) - (20 * s);
+    var brY = h - (65 * s);
+    g.lineStyle(1 * s, redColor);
     g.moveTo(brX, brY);
-    g.lineTo(brX + 150, brY);
-    g.lineTo(brX + 170, brY + 20);
-    g.lineTo(brX, brY + 20);
+    g.lineTo(brX + (150 * s), brY);
+    g.lineTo(brX + (170 * s), brY + (20 * s));
+    g.lineTo(brX, brY + (20 * s));
     g.closePath();
 
     // Arrow Icon
-    g.lineStyle(3, redColor);
+    g.lineStyle(3 * s, redColor);
     g.drawPolygon([
-        brX + 6, brY + 14,
-        brX + 6, brY + 6,
-        brX + 8, brY + 6,
-        brX + 14, brY + 12,
-        brX + 20, brY + 12,
+        brX + 6 * s, brY + 14 * s,
+        brX + 6 * s, brY + 6 * s,
+        brX + 8 * s, brY + 6 * s,
+        brX + 14 * s, brY + 12 * s,
+        brX + 20 * s, brY + 12 * s,
     ]);
-    g.moveTo(brX + 14, brY + 6);
-    g.lineTo(brX + 20, brY + 6);
+    g.moveTo(brX + 14 * s, brY + 6 * s);
+    g.lineTo(brX + 20 * s, brY + 6 * s);
 
     this._brY = brY;
 };
@@ -243,11 +262,12 @@ CY_Loading_Visuals.prototype.createVisualElements = function () {
 CY_Loading_Visuals.prototype.createProgressBar = function () {
     var redColor = parseInt(CY_System.Colors.lightRed.replace('#', ''), 16);
     var w = this._width;
+    var s = this._uiScale;
 
-    var barWidth = 280;
-    var barHeight = 12;
-    var x = w - 90 - 45 - barWidth;
-    var y = 80 - (barHeight / 2); // Corrected Y from user feedback
+    var barWidth = 280 * s;
+    var barHeight = 12 * s;
+    var x = w - (90 * s) - (45 * s) - barWidth;
+    var y = (80 * s) - (barHeight / 2); // Corrected Y from user feedback
 
     this._progressBarContainer = new PIXI.Container();
     this._progressBarContainer.x = x;
@@ -255,28 +275,28 @@ CY_Loading_Visuals.prototype.createProgressBar = function () {
     this._uiContainer.addChild(this._progressBarContainer);
 
     var g = new PIXI.Graphics();
-    g.lineStyle(2, redColor);
+    g.lineStyle(2 * s, redColor);
     g.drawRect(0, 0, barWidth, barHeight);
     this._progressBarContainer.addChild(g);
 
     this._progressBarFill = new PIXI.Graphics();
     this._progressBarFill.beginFill(redColor);
-    this._progressBarFill.drawRect(0, 0, barWidth - 8, barHeight - 6);
+    this._progressBarFill.drawRect(0, 0, barWidth - (8 * s), barHeight - (6 * s));
     this._progressBarFill.endFill();
     this._progressBarFill.scale.x = 0;
-    this._progressBarFill.x = 4;
-    this._progressBarFill.y = 3;
+    this._progressBarFill.x = 4 * s;
+    this._progressBarFill.y = 3 * s;
     this._progressBarContainer.addChild(this._progressBarFill);
 
     var label = CY_Main.makeTextSprite(
         "MEM_CHECK...",
         x,
-        y - 25, // Corrected Y from user feedback
-        100,
-        20,
+        y - (25 * s),
+        100 * s,
+        20 * s,
         {
             fontFace: "GameFont",
-            fontSize: 14, // Corrected size
+            fontSize: 14 * s,
             textColor: CY_System.Colors.lightRed,
             align: 'left'
         }
@@ -287,11 +307,17 @@ CY_Loading_Visuals.prototype.createProgressBar = function () {
 CY_Loading_Visuals.prototype.createSpinner = function () {
     var redColor = parseInt(CY_System.Colors.lightRed.replace("#", ""), 16);
     var w = this._width;
+    var s = this._uiScale;
 
     this._spinnerContainer = new PIXI.Container();
-    this._spinnerContainer.x = w - 90;
-    this._spinnerContainer.y = 60;
+    this._spinnerContainer.x = w - (90 * s);
+    this._spinnerContainer.y = 60 * s;
     this._uiContainer.addChild(this._spinnerContainer);
+
+    // Scale the entire spinner container? 
+    // Or scale drawing commands?
+    // Let's scale the container itself, it's easier for rotation center.
+    this._spinnerContainer.scale.set(s);
 
     var diskBg = new PIXI.Graphics();
     diskBg.beginFill(0xFF6158, 0.05);
@@ -330,70 +356,71 @@ CY_Loading_Visuals.prototype.createSpinner = function () {
 };
 
 CY_Loading_Visuals.prototype.createTextElements = function () {
-    var ncc_top = 30;
+    var s = this._uiScale;
+    var ncc_top = 30 * s;
 
     // Top Left Text
-    this._nccamText = CY_Main.makeTextSprite("NCCAM", 45, ncc_top - 10, 200, 40, {
-        fontFace: "GameFont", fontSize: 20, textColor: CY_System.Colors.lightRed,
-        outlineColor: "#000000", outlineWidth: 4, align: "left"
+    this._nccamText = CY_Main.makeTextSprite("NCCAM", 45 * s, ncc_top - (10 * s), 200 * s, 40 * s, {
+        fontFace: "GameFont", fontSize: 20 * s, textColor: CY_System.Colors.lightRed,
+        outlineColor: "#000000", outlineWidth: 4 * s, align: "left"
     });
     this._uiContainer.addChild(this._nccamText);
 
-    this._codeText = CY_Main.makeTextSprite("FC_4350", 130, ncc_top - 6, 120, 32, {
-        fontFace: "GameFont", fontSize: 16, textColor: CY_System.Colors.lightRed
+    this._codeText = CY_Main.makeTextSprite("FC_4350", 130 * s, ncc_top - (6 * s), 120 * s, 32 * s, {
+        fontFace: "GameFont", fontSize: 16 * s, textColor: CY_System.Colors.lightRed
     });
     this._uiContainer.addChild(this._codeText);
 
     // Decorative Text
     this._nccamCodeExtra = CY_Main.makeTextSprite(
         "4RgspUSpK4A8QG 2 BHQD6bwV93ot fRqvIq8BuwOES z2ORbSCicaJighjuMDqG xPcSXaCPD8iD8eJs Sj4 wTXA OQSyfNdAgXXIL ExrqeQ+8t2kE cBw FCTcemo FESd0YiL9z V10jkQ64Obp8f8X6FRbh7x0HhSLI TILHGtA",
-        210, 20, 360, 30, {
-        fontFace: "GameFont", fontSize: 10, textColor: CY_System.Colors.lightRed,
-        outlineColor: "#000000", outlineWidth: 2, align: "left"
+        210 * s, 20 * s, 360 * s, 30 * s, {
+        fontFace: "GameFont", fontSize: 10 * s, textColor: CY_System.Colors.lightRed,
+        outlineColor: "#000000", outlineWidth: 2 * s, align: "left"
     }
     );
     this._uiContainer.addChild(this._nccamCodeExtra);
 
     this._nccamCodeExtraTwo = CY_Main.makeTextSprite(
         "8iisoVdEumXsB JTw  RUa LyA k C8h478xSiDqqfSQNIvkjb2G CBYhEr8btF OcRgbS2SHqKP+SixjR4014uEehS0G9CceRpcLw8A9X D aGt I6f3OHLQ8 IXDQEzBO8dXIoVpbMe  Xj0FgQAHOSFAQS6fx4TpTLwgJt2qD6wzcP",
-        210, 30, 320, 30, {
-        fontFace: "GameFont", fontSize: 10, textColor: CY_System.Colors.lightRed,
-        outlineColor: "#000000", outlineWidth: 2, align: "left"
+        210 * s, 30 * s, 320 * s, 30 * s, {
+        fontFace: "GameFont", fontSize: 10 * s, textColor: CY_System.Colors.lightRed,
+        outlineColor: "#000000", outlineWidth: 2 * s, align: "left"
     }
     );
     this._uiContainer.addChild(this._nccamCodeExtraTwo);
 
     // Hint Text
     var hint = this._loadingMessages[Math.floor(Math.random() * this._loadingMessages.length)];
-    this._hintText = CY_Main.makeTextSprite(hint, 50, Graphics.height - 80, Graphics.width - 100, 40, {
-        fontFace: "GameFont", fontSize: 18, textColor: CY_System.Colors.lightRed,
-        outlineColor: "#000000", outlineWidth: 4, align: "left"
+    this._hintText = CY_Main.makeTextSprite(hint, 50 * s, Graphics.height - (80 * s), Graphics.width - (100 * s), 40 * s, {
+        fontFace: "GameFont", fontSize: 18 * s, textColor: CY_System.Colors.lightRed,
+        outlineColor: "#000000", outlineWidth: 4 * s, align: "left"
     });
     this._uiContainer.addChild(this._hintText);
 
     // Fx Text
-    this._hintTextFxPre1 = CY_Main.makeTextSprite("C8h478xSiDqqfSQN", 50, Graphics.height - 92, 180, 10, {
-        fontFace: "GameFont", fontSize: 5, textColor: CY_System.Colors.lightRed,
-        outlineColor: "#000000", outlineWidth: 2, align: "left"
+    this._hintTextFxPre1 = CY_Main.makeTextSprite("C8h478xSiDqqfSQN", 50 * s, Graphics.height - (92 * s), 180 * s, 10 * s, {
+        fontFace: "GameFont", fontSize: 5 * s, textColor: CY_System.Colors.lightRed,
+        outlineColor: "#000000", outlineWidth: 2 * s, align: "left"
     });
     this._uiContainer.addChild(this._hintTextFxPre1);
 
-    this._hintTextFxPre2 = CY_Main.makeTextSprite("Ivkjb2G CBYhEr8btF", 50, Graphics.height - 86, 180, 10, {
-        fontFace: "GameFont", fontSize: 5, textColor: CY_System.Colors.lightRed,
-        outlineColor: "#000000", outlineWidth: 2, align: "left"
+    this._hintTextFxPre2 = CY_Main.makeTextSprite("Ivkjb2G CBYhEr8btF", 50 * s, Graphics.height - (86 * s), 180 * s, 10 * s, {
+        fontFace: "GameFont", fontSize: 5 * s, textColor: CY_System.Colors.lightRed,
+        outlineColor: "#000000", outlineWidth: 2 * s, align: "left"
     });
     this._uiContainer.addChild(this._hintTextFxPre2);
 
     // System Text
-    this._sysText = CY_Main.makeTextSprite("SYSTEM_LOADING", Graphics.width - 200, this._brY - 7, 180, 32, {
-        fontFace: "GameFont", fontSize: 16, textColor: CY_System.Colors.lightRed,
-        outlineColor: "#000000", outlineWidth: 4, align: "left"
+    this._sysText = CY_Main.makeTextSprite("SYSTEM_LOADING", Graphics.width - (200 * s), this._brY - (7 * s), 180 * s, 32 * s, {
+        fontFace: "GameFont", fontSize: 16 * s, textColor: CY_System.Colors.lightRed,
+        outlineColor: "#000000", outlineWidth: 4 * s, align: "left"
     });
     this._uiContainer.addChild(this._sysText);
 
-    this._sysLoadDat = CY_Main.makeTextSprite("█  NC_DR_HQ6AYB5LEL3Y6.", Graphics.width - 225, this._brY + 16, 180, 32, {
-        fontFace: "GameFont", fontSize: 6, textColor: CY_System.Colors.lightRed,
-        outlineColor: CY_System.Colors.lightRed, outlineWidth: 1, align: "left"
+    this._sysLoadDat = CY_Main.makeTextSprite("█  NC_DR_HQ6AYB5LEL3Y6.", Graphics.width - (225 * s), this._brY + (16 * s), 180 * s, 32 * s, {
+        fontFace: "GameFont", fontSize: 6 * s, textColor: CY_System.Colors.lightRed,
+        outlineColor: CY_System.Colors.lightRed, outlineWidth: 1 * s, align: "left"
     });
     this._uiContainer.addChild(this._sysLoadDat);
 };
@@ -457,6 +484,16 @@ CY_Scene_Loading.prototype.update = function () {
         } else {
             SceneManager.goto(Scene_Map);
         }
+    }
+};
+
+CY_Scene_Loading.prototype.resize = function () {
+    Scene_Base.prototype.resize.call(this);
+    if (this._visuals) {
+        this.removeChild(this._visuals);
+        this._visuals.destroy();
+        this._visuals = new CY_Loading_Visuals();
+        this.addChild(this._visuals);
     }
 };
 

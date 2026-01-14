@@ -13,7 +13,6 @@
   import ZoomControls from "./lib/components/ZoomControls.svelte";
 
   // Use 'any' for the data types to avoid strict type conflicts with the runtime for now
-  // In a full implementation we would import the specific interfaces from spine-pixi
   type TreeItemData = {
     id: string;
     title: string;
@@ -117,19 +116,30 @@
     treeItems = buildTreeData($skeletonData);
   }
 
-  // Reactive: Selection handling
+  // Reactive: Selection handling (ID -> Store)
   let selectedId: string | null = null;
   $: if (selectedId) {
     if (renderer && renderer.spine) {
-      // Try finding bone
       const bone = renderer.spine.skeleton.findBone(selectedId);
       if (bone) {
-        selectedNode.set(bone); // Sets the Runtime Bone object
+        if ($selectedNode !== bone) selectedNode.set(bone);
       } else {
-        // Maybe it's a slot?
-        // const slot = renderer.spine.skeleton.findSlot(selectedId);
-        // if (slot) selectedNode.set(slot);
+        const slot = renderer.spine.skeleton.findSlot(selectedId);
+        if (slot) {
+          if ($selectedNode !== slot) selectedNode.set(slot);
+        }
       }
+    }
+  }
+
+  // Reactive: Store -> ID
+  $: if ($selectedNode) {
+    const node = $selectedNode as any;
+    // Try getting name from data (Bone/Slot wrapper) or direct name
+    const name = node.data && node.data.name ? node.data.name : node.name;
+
+    if (name && selectedId !== name) {
+      selectedId = name;
     }
   }
 
@@ -139,7 +149,6 @@
       renderer = new SpineRenderer(canvas);
 
       // Force loading the spineboy asset
-      // Note: We use the paths relative to 'public' folder
       await renderer.loadSkeleton(
         "/spines/spineboy-pro.json",
         "/spines/spineboy-pro.atlas",

@@ -1,6 +1,6 @@
 <script lang="ts">
     import { createToolbar, melt } from "@melt-ui/svelte";
-    import { currentTool, undo, redo } from "../Store";
+    import { currentTool, undo, redo, meshTool, selectedNode } from "../Store";
     import {
         MousePointer2,
         Move,
@@ -14,6 +14,9 @@
         FolderOpen,
         Undo,
         Redo,
+        Eraser,
+        PenTool,
+        Pointer,
     } from "lucide-svelte";
 
     const {
@@ -29,10 +32,27 @@
         defaultValue: "select",
     });
 
+    const {
+        elements: { group: meshGroup, item: meshItem },
+        states: { value: meshValue },
+    } = createToolbarGroup({
+        type: "single",
+        defaultValue: "move",
+    });
+
     // Sync store
     $: if ($toolValue) {
         currentTool.set($toolValue as any);
     }
+
+    $: if ($meshValue) {
+        meshTool.set($meshValue as any);
+    }
+
+    // Check if slot is selected (has 'bone' property usually, or is Slot type)
+    $: isSlotSelected =
+        $selectedNode &&
+        (($selectedNode as any).bone || ($selectedNode as any).attachment);
 
     export let mode: "design" | "animate" = "design";
 </script>
@@ -123,6 +143,34 @@
         </button>
     </div>
 
+    {#if isSlotSelected}
+        <div class="separator" use:melt={$separator} />
+        <div class="group-label">MESH</div>
+        <div class="group" use:melt={$meshGroup}>
+            <button
+                class="tool-btn toggle"
+                use:melt={$meshItem("move")}
+                title="Move Vertex"
+            >
+                <Pointer size={18} />
+            </button>
+            <button
+                class="tool-btn toggle"
+                use:melt={$meshItem("add")}
+                title="Add Vertex"
+            >
+                <PenTool size={18} />
+            </button>
+            <button
+                class="tool-btn toggle"
+                use:melt={$meshItem("remove")}
+                title="Remove Vertex"
+            >
+                <Eraser size={18} />
+            </button>
+        </div>
+    {/if}
+
     <div class="separator" use:melt={$separator} />
 
     <!-- Creation Tools -->
@@ -172,6 +220,14 @@
         display: flex;
         align-items: center;
         gap: 2px;
+    }
+
+    .group-label {
+        font-size: 10px;
+        font-weight: 700;
+        color: var(--text-muted);
+        margin-right: 4px;
+        text-transform: uppercase;
     }
 
     .tool-btn {

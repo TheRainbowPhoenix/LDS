@@ -1,11 +1,12 @@
 import * as PIXI from 'pixi.js';
 import { Spine } from './spine-pixi/runtime-3.8/Spine';
-import { selectedNode, currentTool, renderingScale, addHistory, skeletonData } from './Store';
+import { selectedNode, currentTool, renderingScale, addHistory, skeletonData, meshTool } from './Store';
 import { get } from 'svelte/store';
 import { Bone } from './spine-pixi/runtime-3.8/core/Bone';
 import type { Slot } from './spine-pixi/runtime-3.8/core/Slot';
 import { RegionAttachment } from './spine-pixi/runtime-3.8/core/attachments/RegionAttachment';
 import { MeshAttachment } from './spine-pixi/runtime-3.8/core/attachments/MeshAttachment';
+import { Triangulator } from './utils/Triangulator';
 
 export class SpineRenderer {
     app: PIXI.Application;
@@ -64,9 +65,20 @@ export class SpineRenderer {
         this.meshDebug.name = "mesh_wires";
         this.editorContainer.addChild(this.meshDebug);
 
-        // --- Selection Logic (Clicking Slots) ---
+        // --- Selection & Add Logic ---
         this.spineContainer.eventMode = 'static';
         this.spineContainer.on('pointerdown', (e: any) => {
+            // 1. ADD VERTEX Logic
+            if (this.currentSlot && get(meshTool) === 'add') {
+                const attachment = this.currentSlot.getAttachment();
+                if (attachment instanceof MeshAttachment && !attachment.bones) {
+                    this.onAddVertex(e);
+                    e.stopPropagation();
+                    return;
+                }
+            }
+
+            // 2. Selection Logic
             const target = e.target as any;
             if (target && target.slot) {
                 console.log("Selected Slot via click:", target.slot);
@@ -86,6 +98,13 @@ export class SpineRenderer {
 
         window.addEventListener('resize', () => {
             this.mainContainer.position.set(this.app.renderer.width / 2, this.app.renderer.height * 0.8);
+        });
+
+        // Key Listener (Escape)
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                selectedNode.set(null);
+            }
         });
 
         this.setupInputListeners(canvas);
@@ -131,15 +150,13 @@ export class SpineRenderer {
         }
     }
 
+    // ... Load Skeleton / Update ...
     async loadSkeleton(jsonPath: string, atlasPath?: string) {
         try {
             if (this.spine) {
                 this.spine.destroy({ children: true });
                 this.spine = null;
             }
-            // Clear spine container but PRESERVE editor container
-            // We can just remove children except editorContainer?
-            // Or remove all and re-add editorContainer.
             this.spineContainer.removeChildren();
             this.spineContainer.addChild(this.editorContainer);
 
@@ -154,7 +171,6 @@ export class SpineRenderer {
                 this.spine.autoUpdate = false;
 
                 this.spineContainer.addChild(this.spine);
-                // Ensure Editor is on Top
                 this.spineContainer.setChildIndex(this.editorContainer, this.spineContainer.children.length - 1);
 
                 skeletonData.set(spineResource.spineData);
@@ -182,7 +198,6 @@ export class SpineRenderer {
 
     // --- MESH EDITOR ---
     updateMeshEditor() {
-        // RESET STATE if not valid
         if (!this.currentSlot || !this.spine) {
             this.meshDebug.clear();
             for (const h of this.handlePool) h.visible = false;
@@ -196,14 +211,12 @@ export class SpineRenderer {
             return;
         }
 
-        // RENDER
         this.renderMesh(this.currentSlot, attachment);
     }
 
     renderMesh(slot: Slot, attachment: RegionAttachment | MeshAttachment) {
+        const viewScale = this.mainContainer.scale.x;
         const worldVerticesLength = (attachment instanceof MeshAttachment) ? attachment.worldVerticesLength : 8;
-        // Float32Array creation every frame is minor, but could simply reuse a large buffer if needed.
-        // For now, new Float32Array is fine (GC handles it well usually).
         const vertices = new Float32Array(worldVerticesLength);
 
         if (attachment instanceof RegionAttachment) {
@@ -216,7 +229,7 @@ export class SpineRenderer {
         g.clear();
 
         // 1. Internal Triangles (Orange)
-        g.lineStyle(1, 0xffa500, 0.6);
+        g.lineStyle(2 / viewScale, 0xffa500, 0.6);
         let triangles: number[] = [];
         if (attachment instanceof MeshAttachment) {
             triangles = attachment.triangles;
@@ -236,7 +249,7 @@ export class SpineRenderer {
         }
 
         // 2. Hull Outline (Cyan)
-        g.lineStyle(2, 0x00ffff, 1);
+        g.lineStyle(2 / viewScale, 0x00ffff, 1);
         let hullLength = 0;
         if (attachment instanceof MeshAttachment) {
             hullLength = (attachment as any).hullLength;
@@ -246,6 +259,8 @@ export class SpineRenderer {
             hullLength = 4;
         }
 
+        // For MeshAttachment with no known hull, assume convex hull or boundary loop?
+        // Usually vertices are ordered as boundary then internal.
         if (hullLength > 0) {
             g.moveTo(vertices[0], vertices[1]);
             for (let i = 1; i < hullLength; i++) {
@@ -262,17 +277,19 @@ export class SpineRenderer {
 
             let handle: any = this.handlePool[vIdx];
             if (!handle) {
-                // Create new Handle
                 const h = new PIXI.Graphics();
                 h.beginFill(0x2c2c2c).lineStyle(2, 0x00ffff, 1).drawCircle(0, 0, 5).endFill();
                 h.eventMode = 'static';
                 h.cursor = 'pointer';
 
-                // Closure to capture 'this' correctly. 
-                // e.target will be 'h'. We attach meta to 'h'.
                 h.on('pointerdown', (e: any) => {
                     const t = e.target as any;
-                    this.onVertexDragStart(e, t.vertexIndex, this.currentSlot, this.currentSlot?.getAttachment());
+                    if (get(meshTool) === 'remove') {
+                        e.stopPropagation();
+                        this.onRemoveVertex(t.vertexIndex);
+                    } else {
+                        this.onVertexDragStart(e, t.vertexIndex, this.currentSlot, this.currentSlot?.getAttachment());
+                    }
                 });
 
                 this.editorContainer.addChild(h);
@@ -282,10 +299,10 @@ export class SpineRenderer {
 
             handle.visible = true;
             handle.position.set(x, y);
-            handle.vertexIndex = vIdx; // Update index
+            handle.scale.set(1 / viewScale); // Maintain constant visual size
+            handle.vertexIndex = vIdx;
         }
 
-        // Hide unused handles
         for (let i = vertices.length / 2; i < this.handlePool.length; i++) {
             this.handlePool[i].visible = false;
         }
@@ -301,90 +318,127 @@ export class SpineRenderer {
         this.dragStartPos.set(global.x, global.y);
     }
 
-    // ... Drag Move / End ... (restored below)
+    // --- ADD / REMOVE LOGIC ---
 
-    selectBone(name: string) {
-        if (!this.spine) return;
-        const bone = this.spine.skeleton.findBone(name);
-        if (bone) {
-            this.currentBone = bone;
-            this.currentSlot = null;
-            this.showGizmo(get(currentTool) as any);
-        }
-    }
+    onAddVertex(e: any) {
+        const slot = this.currentSlot;
+        if (!slot || !slot.bone) return;
+        const attachment = slot.getAttachment();
+        if (!attachment || !(attachment instanceof MeshAttachment)) return;
+        if (attachment.bones) return; // Skip weighted
 
-    updateGizmoPosition() {
-        if (!this.currentBone || !this.gizmoContainer.visible || !this.spine) return;
-        const localPoint = new PIXI.Point(this.currentBone.worldX, this.currentBone.worldY);
-        const globalPoint = this.spine.toGlobal(localPoint);
-        const gizmoPos = this.mainContainer.toLocal(globalPoint);
-        this.gizmoContainer.position.set(gizmoPos.x, gizmoPos.y);
+        const global = e.data.global;
+        const spineLocal = this.spineContainer.toLocal(global);
+        const boneLocal = { x: 0, y: 0 };
+        slot.bone.worldToLocal(spineLocal, boneLocal);
 
-        if (this.currentBone.parent) {
-            let worldRot = 0;
-            if (typeof (this.currentBone.parent as any).getWorldRotationX === 'function') {
-                worldRot = (this.currentBone.parent as any).getWorldRotationX();
-            } else {
-                worldRot = (this.currentBone.parent as any).worldRotationX || 0;
+        // Find closest edge on Hull
+        const verts = attachment.vertices; // x,y,x,y...
+        const hullLength = (attachment as any).hullLength || (verts.length / 2);
+
+        let minDesc = Infinity;
+        let insertIndex = -1;
+
+        for (let i = 0; i < hullLength; i++) {
+            const i2 = i * 2;
+            const nextI = (i + 1) % hullLength;
+            const nextI2 = nextI * 2;
+
+            const p1 = { x: verts[i2], y: verts[i2 + 1] };
+            const p2 = { x: verts[nextI2], y: verts[nextI2 + 1] };
+
+            // Distance to segment
+            const l2 = (p1.x - p2.x) * (p1.x - p2.x) + (p1.y - p2.y) * (p1.y - p2.y);
+            if (l2 == 0) continue;
+
+            let t = ((boneLocal.x - p1.x) * (p2.x - p1.x) + (boneLocal.y - p1.y) * (p2.y - p1.y)) / l2;
+            t = Math.max(0, Math.min(1, t));
+            const proj = { x: p1.x + t * (p2.x - p1.x), y: p1.y + t * (p2.y - p1.y) };
+            const dist = (boneLocal.x - proj.x) * (boneLocal.x - proj.x) + (boneLocal.y - proj.y) * (boneLocal.y - proj.y);
+
+            if (dist < minDesc) {
+                minDesc = dist;
+                insertIndex = nextI; // Insert AFTER i (so at nextI)
             }
-            this.gizmoContainer.rotation = worldRot * (Math.PI / 180);
-        } else {
-            this.gizmoContainer.rotation = 0;
+        }
+
+        if (insertIndex !== -1) {
+            // 1. Insert Vertex
+            // vertices is Float32Array usually? No, in attachment it is ArrayLike (number[]).
+            // Actually in JS runtime it's usually number[].
+            // Checking if it's Float32Array. If so convert.
+            let vArray = Array.from(attachment.vertices);
+            vArray.splice(insertIndex * 2, 0, boneLocal.x, boneLocal.y);
+            attachment.vertices = vArray;
+
+            // 2. Interpolate UVs
+            const uvs = attachment.regionUVs; // number[]
+            if (uvs) {
+                const prev = (insertIndex - 1 + hullLength) % hullLength; // Index before insertion
+                const next = insertIndex % hullLength; // The index that was there
+                // Wait, we shifted everything.
+                // We inserted at insertIndex.
+                // So the old vertex at insertIndex is now at insertIndex+1.
+                // The old vertex at insertIndex-1 is at insertIndex-1.
+                // Actually easier: interpolate between (insertIndex-1) and (insertIndex).
+
+                // Since we haven't updated UV array yet:
+                const iPrev = (insertIndex - 1 + hullLength) % hullLength;
+                const iNext = insertIndex % hullLength; // If insertIndex == hullLength, wraps to 0?
+                // Wait, insertIndex is based on OLD length.
+
+                // Simple Average UV for now
+                const u = (uvs[iPrev * 2] + uvs[iNext * 2]) * 0.5;
+                const v = (uvs[iPrev * 2 + 1] + uvs[iNext * 2 + 1]) * 0.5;
+
+                let uvArray = Array.from(uvs);
+                uvArray.splice(insertIndex * 2, 0, u, v);
+                attachment.regionUVs = uvArray;
+            }
+
+            (attachment as any).hullLength = hullLength + 1;
+            attachment.worldVerticesLength += 2;
+
+            // 3. Triangulate
+            attachment.triangles = Triangulator.triangulate(attachment.vertices);
+
+            // 4. Force Update
+            slot.currentMesh = null; // Recreate mesh
+            slot.currentMeshId = undefined;
         }
     }
 
-    createGizmos() {
-        this.translateGizmo = new PIXI.Container();
-        const trArrowX = new PIXI.Graphics().lineStyle(2, 0xFF0000, 1).moveTo(0, 0).lineTo(60, 0).beginFill(0xFF0000).moveTo(60, -5).lineTo(75, 0).lineTo(60, 5).endFill();
-        const hitX = new PIXI.Graphics().beginFill(0xFFFFFF, 0.01).drawRect(0, -10, 75, 20); trArrowX.addChild(hitX);
-        trArrowX.eventMode = 'static'; trArrowX.cursor = 'pointer';
-        trArrowX.on('pointerdown', (e) => this.onDragStart(e, 'translate', 'x'));
+    onRemoveVertex(index: number) {
+        const slot = this.currentSlot;
+        if (!slot) return;
+        const attachment = slot.getAttachment();
+        if (!attachment || !(attachment instanceof MeshAttachment)) return;
+        if (attachment.bones) return;
 
-        const trArrowY = new PIXI.Graphics().lineStyle(2, 0x00FF00, 1).moveTo(0, 0).lineTo(0, 60).beginFill(0x00FF00).moveTo(-5, 60).lineTo(0, 75).lineTo(5, 60).endFill();
-        const hitY = new PIXI.Graphics().beginFill(0xFFFFFF, 0.01).drawRect(-10, 0, 20, 75); trArrowY.addChild(hitY);
-        trArrowY.eventMode = 'static'; trArrowY.cursor = 'pointer';
-        trArrowY.on('pointerdown', (e) => this.onDragStart(e, 'translate', 'y'));
+        const hullLength = (attachment as any).hullLength || (attachment.vertices.length / 2);
+        if (hullLength <= 3) return; // Don't destroy triangle
 
-        const trCenter = new PIXI.Graphics().beginFill(0xFFFF00).drawRect(-6, -6, 12, 12);
-        trCenter.eventMode = 'static'; trCenter.cursor = 'pointer';
-        trCenter.on('pointerdown', (e) => this.onDragStart(e, 'translate', 'both'));
-        this.translateGizmo.addChild(trArrowX, trArrowY, trCenter);
+        // Remove Vertex
+        let vArray = Array.from(attachment.vertices);
+        vArray.splice(index * 2, 2);
+        attachment.vertices = vArray;
 
-        this.rotateGizmo = new PIXI.Container();
-        const rotCircle = new PIXI.Graphics().lineStyle(2, 0x00FFFF, 1).drawCircle(0, 0, 50);
-        rotCircle.hitArea = new PIXI.Circle(0, 0, 55);
-        rotCircle.eventMode = 'static'; rotCircle.cursor = 'pointer';
-        rotCircle.on('pointerdown', (e) => this.onDragStart(e, 'rotate', 'both'));
-        const pieVis = new PIXI.Graphics(); pieVis.name = 'pie';
-        this.rotateGizmo.addChild(pieVis, rotCircle);
+        // Remove UV
+        let uvArray = Array.from(attachment.regionUVs);
+        uvArray.splice(index * 2, 2);
+        attachment.regionUVs = uvArray;
 
-        this.scaleGizmo = new PIXI.Container();
-        const scArrowX = new PIXI.Graphics().lineStyle(2, 0xFF0000, 1).moveTo(0, 0).lineTo(50, 0).beginFill(0xFF0000).drawRect(50, -6, 12, 12);
-        scArrowX.eventMode = 'static'; scArrowX.cursor = 'pointer';
-        scArrowX.on('pointerdown', (e) => this.onDragStart(e, 'scale', 'x'));
-        const scArrowY = new PIXI.Graphics().lineStyle(2, 0x00FF00, 1).moveTo(0, 0).lineTo(0, 50).beginFill(0x00FF00).drawRect(-6, 50, 12, 12);
-        scArrowY.eventMode = 'static'; scArrowY.cursor = 'pointer';
-        scArrowY.on('pointerdown', (e) => this.onDragStart(e, 'scale', 'y'));
-        this.scaleGizmo.addChild(scArrowX, scArrowY);
+        (attachment as any).hullLength = hullLength - 1;
+        attachment.worldVerticesLength -= 2;
+        attachment.triangles = Triangulator.triangulate(attachment.vertices);
 
-        this.gizmoContainer.addChild(this.translateGizmo, this.rotateGizmo, this.scaleGizmo);
-        this.hideGizmos();
+        slot.currentMesh = null;
+        slot.currentMeshId = undefined;
     }
 
-    showGizmo(type: 'translate' | 'rotate' | 'scale') {
-        this.hideGizmos();
-        this.gizmoContainer.visible = true;
-        if (type === 'translate') this.translateGizmo.visible = true;
-        if (type === 'rotate') this.rotateGizmo.visible = true;
-        if (type === 'scale') this.scaleGizmo.visible = true;
-    }
-
-    hideGizmos() {
-        this.gizmoContainer.visible = false;
-        this.translateGizmo.visible = false;
-        this.rotateGizmo.visible = false;
-        this.scaleGizmo.visible = false;
-    }
+    // ... Drag Logic Re-Implementation ...
+    // Need to paste setupInputListeners, onDragStart, onDragMove, onDragEnd from before
+    // because overwrite replaces content.
 
     setupInputListeners(canvas: HTMLCanvasElement) {
         let isPanning = false, lastX = 0, lastY = 0;
@@ -439,7 +493,7 @@ export class SpineRenderer {
                 attachment.offset[idx + 1] = boneLocal.y;
                 attachment.updateOffset();
             } else if (attachment instanceof MeshAttachment) {
-                if (attachment.bones && attachment.bones.length > 0) {
+                if (attachment.bones) {
                     // Weighted - limited support
                 } else {
                     attachment.vertices[idx] = boneLocal.x;
@@ -527,4 +581,93 @@ export class SpineRenderer {
         const pie = this.rotateGizmo.getChildByName('pie') as PIXI.Graphics;
         if (pie) pie.clear();
     }
+
+    // ... createGizmos, showGizmo, hideGizmos (copied from prev state)
+    // To save context space I will use (...) placeholder for methods that didn't change logically, 
+    // BUT since I am overwriting I must provide full content.
+    // I will include the full code for Gizmos.
+
+    createGizmos() {
+        this.translateGizmo = new PIXI.Container();
+        const trArrowX = new PIXI.Graphics().lineStyle(2, 0xFF0000, 1).moveTo(0, 0).lineTo(60, 0).beginFill(0xFF0000).moveTo(60, -5).lineTo(75, 0).lineTo(60, 5).endFill();
+        const hitX = new PIXI.Graphics().beginFill(0xFFFFFF, 0.01).drawRect(0, -10, 75, 20); trArrowX.addChild(hitX);
+        trArrowX.eventMode = 'static'; trArrowX.cursor = 'pointer';
+        trArrowX.on('pointerdown', (e) => this.onDragStart(e, 'translate', 'x'));
+
+        const trArrowY = new PIXI.Graphics().lineStyle(2, 0x00FF00, 1).moveTo(0, 0).lineTo(0, 60).beginFill(0x00FF00).moveTo(-5, 60).lineTo(0, 75).lineTo(5, 60).endFill();
+        const hitY = new PIXI.Graphics().beginFill(0xFFFFFF, 0.01).drawRect(-10, 0, 20, 75); trArrowY.addChild(hitY);
+        trArrowY.eventMode = 'static'; trArrowY.cursor = 'pointer';
+        trArrowY.on('pointerdown', (e) => this.onDragStart(e, 'translate', 'y'));
+
+        const trCenter = new PIXI.Graphics().beginFill(0xFFFF00).drawRect(-6, -6, 12, 12);
+        trCenter.eventMode = 'static'; trCenter.cursor = 'pointer';
+        trCenter.on('pointerdown', (e) => this.onDragStart(e, 'translate', 'both'));
+        this.translateGizmo.addChild(trArrowX, trArrowY, trCenter);
+
+        this.rotateGizmo = new PIXI.Container();
+        const rotCircle = new PIXI.Graphics().lineStyle(2, 0x00FFFF, 1).drawCircle(0, 0, 50);
+        rotCircle.hitArea = new PIXI.Circle(0, 0, 55);
+        rotCircle.eventMode = 'static'; rotCircle.cursor = 'pointer';
+        rotCircle.on('pointerdown', (e) => this.onDragStart(e, 'rotate', 'both'));
+        const pieVis = new PIXI.Graphics(); pieVis.name = 'pie';
+        this.rotateGizmo.addChild(pieVis, rotCircle);
+
+        this.scaleGizmo = new PIXI.Container();
+        const scArrowX = new PIXI.Graphics().lineStyle(2, 0xFF0000, 1).moveTo(0, 0).lineTo(50, 0).beginFill(0xFF0000).drawRect(50, -6, 12, 12);
+        scArrowX.eventMode = 'static'; scArrowX.cursor = 'pointer';
+        scArrowX.on('pointerdown', (e) => this.onDragStart(e, 'scale', 'x'));
+        const scArrowY = new PIXI.Graphics().lineStyle(2, 0x00FF00, 1).moveTo(0, 0).lineTo(0, 50).beginFill(0x00FF00).drawRect(-6, 50, 12, 12);
+        scArrowY.eventMode = 'static'; scArrowY.cursor = 'pointer';
+        scArrowY.on('pointerdown', (e) => this.onDragStart(e, 'scale', 'y'));
+        this.scaleGizmo.addChild(scArrowX, scArrowY);
+
+        this.gizmoContainer.addChild(this.translateGizmo, this.rotateGizmo, this.scaleGizmo);
+        this.hideGizmos();
+    }
+
+    showGizmo(type: 'translate' | 'rotate' | 'scale') {
+        this.hideGizmos();
+        this.gizmoContainer.visible = true;
+        if (type === 'translate') this.translateGizmo.visible = true;
+        if (type === 'rotate') this.rotateGizmo.visible = true;
+        if (type === 'scale') this.scaleGizmo.visible = true;
+    }
+
+    hideGizmos() {
+        this.gizmoContainer.visible = false;
+        this.translateGizmo.visible = false;
+        this.rotateGizmo.visible = false;
+        this.scaleGizmo.visible = false;
+    }
+
+    selectBone(name: string) {
+        if (!this.spine) return;
+        const bone = this.spine.skeleton.findBone(name);
+        if (bone) {
+            this.currentBone = bone;
+            this.currentSlot = null;
+            this.showGizmo(get(currentTool) as any);
+        }
+    }
+
+    updateGizmoPosition() {
+        if (!this.currentBone || !this.gizmoContainer.visible || !this.spine) return;
+        const localPoint = new PIXI.Point(this.currentBone.worldX, this.currentBone.worldY);
+        const globalPoint = this.spine.toGlobal(localPoint);
+        const gizmoPos = this.mainContainer.toLocal(globalPoint);
+        this.gizmoContainer.position.set(gizmoPos.x, gizmoPos.y);
+
+        if (this.currentBone.parent) {
+            let worldRot = 0;
+            if (typeof (this.currentBone.parent as any).getWorldRotationX === 'function') {
+                worldRot = (this.currentBone.parent as any).getWorldRotationX();
+            } else {
+                worldRot = (this.currentBone.parent as any).worldRotationX || 0;
+            }
+            this.gizmoContainer.rotation = worldRot * (Math.PI / 180);
+        } else {
+            this.gizmoContainer.rotation = 0;
+        }
+    }
+
 }

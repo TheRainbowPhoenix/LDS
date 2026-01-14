@@ -42,7 +42,7 @@ CY_Scene_MenuBase.ACTION_BAR_HEIGHT = 48;
 // Initialization
 //-----------------------------------------------------------------------------
 
-CY_Scene_MenuBase.prototype.initialize = function() {
+CY_Scene_MenuBase.prototype.initialize = function () {
     Scene_MenuBase.prototype.initialize.call(this);
 };
 
@@ -50,17 +50,30 @@ CY_Scene_MenuBase.prototype.initialize = function() {
 // Scene Lifecycle
 //-----------------------------------------------------------------------------
 
-CY_Scene_MenuBase.prototype.create = function() {
+CY_Scene_MenuBase.prototype.create = function () {
     Scene_MenuBase.prototype.create.call(this);
     this.createGradientBackground();
 };
 
-CY_Scene_MenuBase.prototype.start = function() {
+CY_Scene_MenuBase.prototype.resize = function () {
+    Scene_MenuBase.prototype.resize.call(this);
+
+    // Refresh gradient background to new size
+    if (this._backgroundSprite) {
+        this.removeChild(this._backgroundSprite);
+        this.createBackground();
+        // Ensure it's at the bottom
+        this.setChildIndex(this._backgroundSprite, 0);
+        this.createGradientBackground();
+    }
+};
+
+CY_Scene_MenuBase.prototype.start = function () {
     Scene_MenuBase.prototype.start.call(this);
     // this.applyCRTFilter();
 };
 
-CY_Scene_MenuBase.prototype.update = function() {
+CY_Scene_MenuBase.prototype.update = function () {
     Scene_MenuBase.prototype.update.call(this);
     // this.updateCRTFilter();
 };
@@ -72,7 +85,7 @@ CY_Scene_MenuBase.prototype.update = function() {
 /**
  * Override createBackground to use custom gradient.
  */
-CY_Scene_MenuBase.prototype.createBackground = function() {
+CY_Scene_MenuBase.prototype.createBackground = function () {
     this._backgroundSprite = new Sprite();
     this._backgroundSprite.bitmap = new Bitmap(Graphics.width, Graphics.height);
     this.addChild(this._backgroundSprite);
@@ -82,23 +95,23 @@ CY_Scene_MenuBase.prototype.createBackground = function() {
  * Create the gradient background.
  * Top: #39141B, Center: #06060E, Bottom: #08090E
  */
-CY_Scene_MenuBase.prototype.createGradientBackground = function() {
+CY_Scene_MenuBase.prototype.createGradientBackground = function () {
     if (!this._backgroundSprite) return;
-    
+
     var bmp = this._backgroundSprite.bitmap;
     var ctx = bmp._context;
     var w = Graphics.width;
     var h = Graphics.height;
-    
+
     // Create vertical gradient
     var gradient = ctx.createLinearGradient(0, 0, 0, h);
     gradient.addColorStop(0, '#39141B');    // Top - dark red
     gradient.addColorStop(0.5, '#06060E');  // Center - very dark
     gradient.addColorStop(1, '#08090E');    // Bottom - near black
-    
+
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, w, h);
-    
+
     bmp._baseTexture.update();
 };
 
@@ -109,7 +122,7 @@ CY_Scene_MenuBase.prototype.createGradientBackground = function() {
 /**
  * Calculate the offset needed to go from boxWidth/boxHeight to full screen.
  */
-CY_Scene_MenuBase.prototype.getScreenOffsets = function() {
+CY_Scene_MenuBase.prototype.getScreenOffsets = function () {
     return {
         x: 0, // -Math.floor((Graphics.width - Graphics.boxWidth) / 2),
         y: 0, // -Math.floor((Graphics.height - Graphics.boxHeight) / 2),
@@ -121,14 +134,14 @@ CY_Scene_MenuBase.prototype.getScreenOffsets = function() {
 /**
  * Get the lens padding value.
  */
-CY_Scene_MenuBase.prototype.getLensPadding = function() {
+CY_Scene_MenuBase.prototype.getLensPadding = function () {
     return CY_Scene_MenuBase.LENS_PADDING;
 };
 
 /**
  * Make a window fully transparent (no background).
  */
-CY_Scene_MenuBase.prototype.makeWindowTransparent = function(window) {
+CY_Scene_MenuBase.prototype.makeWindowTransparent = function (window) {
     window.opacity = 0;
     if (window._cyBackSprite) {
         window._cyBackSprite.bitmap.clear();
@@ -143,7 +156,7 @@ CY_Scene_MenuBase.prototype.makeWindowTransparent = function(window) {
 /**
  * Apply CRT lens distortion filter to the entire scene.
  */
-CY_Scene_MenuBase.prototype.applyCRTFilter = function() {
+CY_Scene_MenuBase.prototype.applyCRTFilter = function () {
     if (!PIXI.Filter) return;
 
     // 1. Explicit Vertex Shader (Required for PIXI 4 stability)
@@ -157,7 +170,7 @@ CY_Scene_MenuBase.prototype.applyCRTFilter = function() {
             vTextureCoord = aTextureCoord;
         }
     `;
-    
+
     // 2. Fragment Shader (Tweaked for PIXI 4)
     var crtFragmentShader = `
         precision mediump float;
@@ -240,7 +253,7 @@ CY_Scene_MenuBase.prototype.applyCRTFilter = function() {
             gl_FragColor = color;
         }
     `;
-    
+
     try {
         // Pass Vertex shader (1st arg) instead of null
         this._crtFilter = new PIXI.Filter(crtVertexShader, crtFragmentShader, {
@@ -250,35 +263,35 @@ CY_Scene_MenuBase.prototype.applyCRTFilter = function() {
             uGhostOpacity: 0.12,
             uEdgeNoiseWidth: 0.025
         });
-        
+
         // MV Configuration check
         // Check global ConfigManager or fallback to true
         var crtEnabled = (typeof ConfigManager.crtShader !== 'undefined') ? ConfigManager.crtShader : true;
-        
+
         if (crtEnabled) {
             this.filters = [this._crtFilter];
         }
         this._crtTime = 0;
     } catch (e) {
         console.warn('CRT filter error:', e);
-        this.filters = null; 
+        this.filters = null;
     }
 };
 
 /**
  * Update CRT shader.
  */
-CY_Scene_MenuBase.prototype.updateCRTFilter = function() {
-    
+CY_Scene_MenuBase.prototype.updateCRTFilter = function () {
+
     var crtEnabled = ConfigManager.crtShader !== false;
-    
+
     if (this._crtFilter) {
         if (crtEnabled && !this.filters) {
             this.filters = [this._crtFilter];
         } else if (!crtEnabled && this.filters) {
             this.filters = null;
         }
-        
+
         if (crtEnabled && this._crtFilter.uniforms) {
             this._crtTime += 0.016;
             this._crtFilter.uniforms.uTime = this._crtTime;

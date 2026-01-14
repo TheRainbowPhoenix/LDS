@@ -16,8 +16,8 @@ SceneManager._getTimeInMsWithoutMobileSafari = function () {
 
 const aspectRatio = window.innerWidth / window.innerHeight;
 
-const screenHeight = window.innerHeight - 1;
-const screenWidth = window.innerWidth - 1;
+var screenHeight = window.innerHeight - 1;
+var screenWidth = window.innerWidth - 1;
 
 // The logic is now dynamic for both mobile and desktop
 // screenWidth = Math.round(screenHeight * aspectRatio);
@@ -64,6 +64,7 @@ SceneManager.initialize = function () {
     this.initNwjs();
     this.checkPluginErrors();
     this.setupErrorHandlers();
+    this.setupWindowHandlers();
 };
 
 SceneManager.initGraphics = function () {
@@ -138,6 +139,28 @@ SceneManager.checkPluginErrors = function () {
 SceneManager.setupErrorHandlers = function () {
     window.addEventListener('error', this.onError.bind(this));
     document.addEventListener('keydown', this.onKeyDown.bind(this));
+};
+
+SceneManager.setupWindowHandlers = function () {
+    window.addEventListener('resize', this.onWindowResize.bind(this));
+};
+
+SceneManager.onWindowResize = function () {
+    var width = window.innerWidth;
+    var height = window.innerHeight;
+    this._screenWidth = width;
+    this._screenHeight = height;
+    this._boxWidth = width;
+    this._boxHeight = height;
+
+    Graphics.boxWidth = width;
+    Graphics.boxHeight = height;
+    Graphics.width = width;
+    Graphics.height = height;
+
+    if (this._scene && this._scene.resize) {
+        this._scene.resize();
+    }
 };
 
 SceneManager.requestUpdate = function () {
